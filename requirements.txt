@@ -1,0 +1,5 @@
+scrapy
+nltk
+flask
+psycopg2-binary
+pytest

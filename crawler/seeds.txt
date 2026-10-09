@@ -4,5 +4,4 @@ https://quotes.toscrape.com/
 https://docs.python.org/3/
 https://developer.mozilla.org/en-US/docs/Web
 https://realpython.com/
-https://www.w3schools.com/python/
 https://en.wikipedia.org/wiki/Information_retrieval

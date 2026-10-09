@@ -11,8 +11,11 @@ Run `python crawler/check_robots.py` to re-check at any time.
 | https://docs.python.org/3/ | Allowed | `/dev`, `/release`, old versions (`/2/`, `/3.0/`–`/3.10/`) | Keep |
 | https://developer.mozilla.org/en-US/docs/Web | Allowed | `/api/`, `/*/files/`, `/media` | Keep |
 | https://realpython.com/ | Allowed | `/search`, `?q=` URLs, `/practice/`, `/quizzes/`, account pages | Keep |
-| https://www.w3schools.com/python/ | Allowed | `/images`, `/code/`, `.aspx` pages | Keep |
-| https://en.wikipedia.org/wiki/Information_retrieval | To confirm with the script | – | Keep only if allowed; use a low page limit |
+| https://en.wikipedia.org/wiki/Information_retrieval | Allowed | admin and special pages (handled by Scrapy) | Keep; use a low page limit |
+
+Removed
+
+- https://www.w3schools.com/python/ – the server refuses robots.txt to our crawler (HTTP 403), so it does not want automated access. Dropped from the seed list.
 
 Notes
 

@@ -3,5 +3,5 @@ https://books.toscrape.com/
 https://quotes.toscrape.com/
 https://docs.python.org/3/
 https://developer.mozilla.org/en-US/docs/Web
-https://realpython.com/
+https://nlp.stanford.edu/IR-book/html/htmledition/irbook.html
 https://en.wikipedia.org/wiki/Information_retrieval

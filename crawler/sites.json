@@ -1,0 +1,84 @@
+{
+  "_comment": "Per-site crawl rules. Start URLs come from seeds.txt; each seed is matched to a site here by its host. max_pages = pages SAVED for that site, max_depth = link steps from the seed. allow / deny are regular expressions matched against the URL path: a link is followed only if it matches one 'allow' pattern and no 'deny' pattern. A seed with no entry here uses 'defaults' and stays under the seed's own path.",
+  "defaults": {
+    "max_pages": 200,
+    "max_depth": 3,
+    "deny": [
+      "\\.(pdf|zip|gz|tar|png|jpe?g|gif|svg|webp|mp4|mp3|css|js|json|xml|txt|epub)$",
+      "/(login|logout|signin|signup|register|account|cart|search)(/|$)"
+    ]
+  },
+  "sites": [
+    {
+      "name": "books",
+      "host": "books.toscrape.com",
+      "max_pages": 250,
+      "max_depth": 4,
+      "allow": [
+        "^/$",
+        "^/index\\.html$",
+        "^/catalogue/"
+      ]
+    },
+    {
+      "name": "quotes",
+      "host": "quotes.toscrape.com",
+      "max_pages": 150,
+      "max_depth": 4,
+      "allow": [
+        "^/$",
+        "^/page/\\d+/?$",
+        "^/tag/",
+        "^/author/"
+      ]
+    },
+    {
+      "name": "python-docs",
+      "host": "docs.python.org",
+      "max_pages": 250,
+      "max_depth": 4,
+      "allow": [
+        "^/3/"
+      ],
+      "deny": [
+        "^/3/(genindex|py-modindex|search|_sources|_static|download|archives)",
+        "^/3/whatsnew/[0-2]\\."
+      ]
+    },
+    {
+      "name": "mdn",
+      "host": "developer.mozilla.org",
+      "max_pages": 250,
+      "max_depth": 3,
+      "allow": [
+        "^/en-US/docs/Web(/|$)"
+      ],
+      "deny": [
+        "/contributors\\.txt$",
+        "/_sample_\\.",
+        "/runner\\.html$"
+      ]
+    },
+    {
+      "name": "ir-book",
+      "host": "nlp.stanford.edu",
+      "max_pages": 260,
+      "max_depth": 3,
+      "allow": [
+        "^/IR-book/html/htmledition/[A-Za-z0-9_-]+\\.html$"
+      ]
+    },
+    {
+      "name": "wikipedia",
+      "host": "en.wikipedia.org",
+      "max_pages": 200,
+      "max_depth": 2,
+      "allow": [
+        "^/wiki/[^:]+$"
+      ],
+      "deny": [
+        "^/wiki/Main_Page$"
+      ]
+    }
+  ]
+}

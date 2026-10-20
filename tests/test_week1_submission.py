@@ -3,8 +3,8 @@ from urllib.error import HTTPError
 import pytest
 from scrapy.http import HtmlResponse, Request
 
-from crawler import week1_robots_check
-from crawler.week1_submission_spider import Week1SubmissionSpider
+from crawler.week1 import week1_robots_check
+from crawler.week1.week1_submission_spider import Week1SubmissionSpider
 
 
 def make_response(url: str, body: str) -> HtmlResponse:

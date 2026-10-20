@@ -1,19 +1,20 @@
 {
-  "_comment": "Per-site crawl rules. Start URLs come from seeds.txt; each seed is matched to a site here by its host. max_pages = pages SAVED for that site, max_depth = link steps from the seed. allow / deny are regular expressions matched against the URL path: a link is followed only if it matches one 'allow' pattern and no 'deny' pattern. A seed with no entry here uses 'defaults' and stays under the seed's own path.",
+  "_comment": "Per-site crawl rules. Start URLs come from seeds.txt; each seed is matched to a site here by its host. max_pages = target size of the collection for that site (pages already saved count towards it, so a re-crawl with the same limits only checks old pages for changes and raising a limit grows the collection). max_depth = link steps from the seed. allow / deny are regular expressions matched against the URL path: a link is followed only if it matches one 'allow' pattern and no 'deny' pattern. language = value used when a page does not declare its language. A seed with no entry here uses 'defaults' and stays under the seed's own path.",
   "defaults": {
     "max_pages": 200,
     "max_depth": 3,
     "deny": [
       "\\.(pdf|zip|gz|tar|png|jpe?g|gif|svg|webp|mp4|mp3|css|js|json|xml|txt|epub)$",
       "/(login|logout|signin|signup|register|account|cart|search)(/|$)"
-    ]
+    ],
+    "language": "en"
   },
   "sites": [
     {
       "name": "books",
       "host": "books.toscrape.com",
-      "max_pages": 250,
-      "max_depth": 4,
+      "max_pages": 1000,
+      "max_depth": 6,
       "allow": [
         "^/$",
         "^/index\\.html$",
@@ -23,8 +24,8 @@
     {
       "name": "quotes",
       "host": "quotes.toscrape.com",
-      "max_pages": 150,
-      "max_depth": 4,
+      "max_pages": 250,
+      "max_depth": 6,
       "allow": [
         "^/$",
         "^/page/\\d+/?$",
@@ -35,8 +36,8 @@
     {
       "name": "python-docs",
       "host": "docs.python.org",
-      "max_pages": 250,
-      "max_depth": 4,
+      "max_pages": 700,
+      "max_depth": 5,
       "allow": [
         "^/3/"
       ],
@@ -48,7 +49,7 @@
     {
       "name": "mdn",
       "host": "developer.mozilla.org",
-      "max_pages": 250,
+      "max_pages": 700,
       "max_depth": 3,
       "allow": [
         "^/en-US/docs/Web(/|$)"
@@ -71,13 +72,52 @@
     {
       "name": "wikipedia",
       "host": "en.wikipedia.org",
-      "max_pages": 200,
+      "max_pages": 600,
       "max_depth": 2,
       "allow": [
         "^/wiki/[^:]+$"
       ],
       "deny": [
         "^/wiki/Main_Page$"
+      ]
+    },
+    {
+      "name": "postgresql-docs",
+      "host": "www.postgresql.org",
+      "max_pages": 450,
+      "max_depth": 3,
+      "allow": [
+        "^/docs/current/([a-z0-9-]+\\.html)?$"
+      ],
+      "deny": [
+        "^/docs/current/(bookindex|biblio)\\.html$"
+      ]
+    },
+    {
+      "name": "scrapy-docs",
+      "host": "docs.scrapy.org",
+      "max_pages": 200,
+      "max_depth": 4,
+      "allow": [
+        "^/en/latest/([A-Za-z0-9_/.-]+\\.html)?$"
+      ],
+      "deny": [
+        "/(_sources|_static|_images|_downloads|genindex|search|py-modindex)(\\.html)?(/|$)",
+        "^/en/latest/_modules/"
+      ]
+    },
+    {
+      "name": "flask-docs",
+      "host": "flask.palletsprojects.com",
+      "max_pages": 150,
+      "max_depth": 4,
+      "allow": [
+        "^/en/stable/([A-Za-z0-9_/.-]+/)?$",
+        "^/en/stable/[A-Za-z0-9_/.-]+\\.html$"
+      ],
+      "deny": [
+        "/(_sources|_static|_images|_downloads|genindex|search|py-modindex)(\\.html)?(/|$)",
+        "^/en/stable/_modules/"
       ]
     }
   ]

@@ -11,27 +11,46 @@ Owner: Mohammed (Computer Engineering). All commands run from the **repository r
 | `iris_spider.py` | The crawler (Scrapy spider) |
 | `cleaner.py` | Turns HTML into clean text: title, main text, description, language |
 | `dedupe.py` | Blocks the same URL and the same text from being saved twice |
-| `pipelines.py` | Saves pages to PostgreSQL and to `output/pages.jsonl` |
+| `pipelines.py` | Saves new pages and updates changed pages in PostgreSQL and `output/pages.jsonl` |
 | `pages_table.sql` | The `pages` table the crawler fills (copy into `docs/schema.sql`) |
 | `run_crawl.py` | Starts the crawl |
 | `crawl_report.py` | Writes `docs/crawl-report.md` from the crawl output |
-| `load_jsonl.py` | Loads `pages.jsonl` into a teammate's own database |
+| `load_jsonl.py` | Loads `pages.jsonl` into any database (local or cloud): adds new, updates changed |
 | `check_robots.py` | Checks every seed against its robots.txt |
-| `test_spider.py` | Week 1 test spider (kept for reference) |
+| `week1/` | Week 1 smoke spiders, robots check and sample output (kept for reference) |
 
 ## Run
 
 ```bash
 pip install scrapy psycopg2-binary pytest
 
-python -m crawler.run_crawl --max-pages 5 --fresh   # quick test: 5 pages per site
-python -m crawler.run_crawl --fresh                 # full crawl (about 1,300 pages, 10-25 min)
-python -m crawler.crawl_report                      # writes docs/crawl-report.md
-python -m pytest tests                              # unit tests
+python3 run_pipeline.py                              # robots check -> crawl -> report -> index (repository root)
+python3 -m crawler.run_crawl                         # crawl only
+python3 -m crawler.crawl_report                      # writes docs/crawl-report.md
+python3 -m pytest                                    # unit tests
+
+# quick test that touches neither your database nor your real output file
+python3 -m crawler.run_crawl --max-pages 5 --no-db --out /tmp/test.jsonl --fresh
 ```
 
 Other options: `--only books,mdn` (some sites only), `--delay 2` (slower), `--log-level WARNING` (quieter).
-Running again **without** `--fresh` keeps the old pages and only adds new ones.
+
+## Incremental re-crawl
+
+Every run starts from the pages already saved (in the database and in `output/pages.jsonl`):
+
+| Page | What happens |
+| --- | --- |
+| Never seen before | saved as **new** (only while the site is below its `max_pages`) |
+| Seen before, text changed | saved again as an **update**, `updated_at` = now |
+| Seen before, text the same | counted as **unchanged**, nothing written |
+
+`max_pages` is the target size of the collection for each site. Running again with the same limits only
+checks the old pages; raising a limit adds exactly the difference as new pages. Pages at the depth limit
+that were seen before are requested with `If-None-Match` / `If-Modified-Since`, so an unchanged page
+answers `304 Not Modified` without sending its content again.
+
+`--fresh` only starts a new `pages.jsonl`; the database keeps its pages.
 
 ## Database
 

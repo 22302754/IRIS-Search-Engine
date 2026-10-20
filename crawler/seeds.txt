@@ -1,7 +1,10 @@
-# IRIS proposed seed sites (one URL per line). Final list is agreed in the kick-off meeting.
+# IRIS seed sites (one URL per line). Rules for each site are in sites.json.
 https://books.toscrape.com/
 https://quotes.toscrape.com/
 https://docs.python.org/3/
 https://developer.mozilla.org/en-US/docs/Web
 https://nlp.stanford.edu/IR-book/html/htmledition/irbook.html
 https://en.wikipedia.org/wiki/Information_retrieval
+https://www.postgresql.org/docs/current/
+https://docs.scrapy.org/en/latest/
+https://flask.palletsprojects.com/en/stable/

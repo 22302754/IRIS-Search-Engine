@@ -70,3 +70,65 @@ def test_canonicalize_url():
 def test_content_hash_ignores_case_and_spaces():
     assert content_hash("Hello   World\n") == content_hash("hello world")
     assert content_hash("hello world") != content_hash("hello there")
+
+
+IR_BOOK_PAGE = """<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
+<HTML><HEAD><TITLE>Tokenization</TITLE></HEAD>
+<BODY >
+<!--Navigation Panel-->
+<A NAME="tex2html1" HREF="next.html"><IMG ALT="next" SRC="next.png"></A>
+<A NAME="tex2html2" HREF="up.html"><IMG ALT="up" SRC="up.png"></A>
+<BR>
+<B> Next:</B> <A HREF="next.html">Dropping common terms</A>
+<B> Up:</B> <A HREF="up.html">Determining the vocabulary</A>
+<B> Previous:</B> <A HREF="prev.html">Determining the vocabulary</A>
+ &nbsp; <B>  <A HREF="contents.html">Contents</A></B>
+ &nbsp; <B>  <A HREF="index.html">Index</A></B>
+<BR>
+<!--End of Navigation Panel-->
+<H2>Tokenization</H2>
+<P>""" + " ".join(["token"] * 40) + """</P>
+<HR>
+<!--Navigation Panel-->
+<B> Next:</B> <A HREF="next.html">Dropping common terms</A>
+<!--End of Navigation Panel-->
+<ADDRESS>&copy; 2008 Cambridge University Press</ADDRESS>
+</BODY></HTML>"""
+
+
+def test_ir_book_navigation_and_footer_are_removed():
+    result = extract_page(IR_BOOK_PAGE, "https://nlp.stanford.edu/IR-book/html/htmledition/tokenization-1.html")
+    text = result["text"]
+    for junk in ("Next:", "Up:", "Previous:", "Dropping common terms", "Contents", "Cambridge"):
+        assert junk not in text
+    assert text.startswith("Tokenization")
+    assert result["word_count"] == 41
+
+
+def test_unclosed_navigation_comment_keeps_the_page():
+    html = f"<html><body><!--Navigation Panel--><p>{LONG}</p></body></html>"
+    assert extract_page(html, "https://x.com/a")["word_count"] == 40
+
+
+READ_THE_DOCS_PAGE = """<html lang="en"><head><title>Scrapy at a glance</title></head><body class="wy-body-for-nav">
+<div class="wy-grid-for-nav">
+  <nav data-toggle="wy-nav-shift" class="wy-nav-side"><div class="wy-side-scroll">Sidebar menu</div></nav>
+  <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+    <nav class="wy-nav-top" aria-label="Mobile navigation menu">Top menu</nav>
+    <div class="wy-nav-content"><div class="rst-content">
+      <div role="navigation" aria-label="Page navigation">Breadcrumbs</div>
+      <div role="main" class="document" itemscope="itemscope">
+        <div itemprop="articleBody"><h1>Scrapy at a glance</h1><p>""" + " ".join(["spider"] * 40) + """</p></div>
+      </div>
+      <footer>Previous Next</footer>
+    </div></div>
+  </section>
+</div></body></html>"""
+
+
+def test_read_the_docs_content_inside_nav_named_wrapper_is_kept():
+    result = extract_page(READ_THE_DOCS_PAGE, "https://docs.scrapy.org/en/latest/intro/overview.html")
+    assert result is not None
+    assert result["text"].startswith("Scrapy at a glance")
+    for junk in ("Sidebar menu", "Top menu", "Breadcrumbs", "Previous Next"):
+        assert junk not in result["text"]

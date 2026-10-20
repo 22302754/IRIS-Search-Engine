@@ -12,6 +12,9 @@ from collections import Counter, defaultdict
 from datetime import datetime
 from pathlib import Path
 
+from crawler.iris_spider import load_rules
+from crawler.pipelines import read_jsonl
+
 HERE = Path(__file__).parent
 ROOT = HERE.parent
 
@@ -32,10 +35,7 @@ def fmt_duration(seconds):
 
 
 def build_report(pages_file, stats_file):
-    pages = []
-    if Path(pages_file).exists():
-        with open(pages_file, encoding="utf-8") as fh:
-            pages = [json.loads(line) for line in fh if line.strip()]
+    pages = list(read_jsonl(pages_file).values())      # newest record per URL
     stats = json.loads(Path(stats_file).read_text(encoding="utf-8")) if Path(stats_file).exists() else {}
 
     per_site = defaultdict(lambda: {"pages": 0, "words": 0})
@@ -47,7 +47,13 @@ def build_report(pages_file, stats_file):
         languages[p.get("language", "unknown")] += 1
 
     run_sites = stats.get("sites", {})
-    order = list(run_sites) + [s for s in per_site if s not in run_sites]
+    # seed and target size come from the configuration, so sites missing from a partial run still show them
+    try:
+        config = {r.name: r for r in load_rules(HERE / "seeds.txt", HERE / "sites.json")}
+    except (OSError, ValueError):
+        config = {}
+    order = list(config) + [s for s in list(run_sites) + list(per_site) if s not in config]
+    order = list(dict.fromkeys(order))
     total_pages = sum(s["pages"] for s in per_site.values())
     total_words = sum(s["words"] for s in per_site.values())
 
@@ -56,6 +62,8 @@ def build_report(pages_file, stats_file):
     out.append("")
     out.append(f"The collection holds **{total_pages:,} pages** and **{total_words:,} words** "
                f"from **{len(per_site)} sites**.")
+    if stats and len(run_sites) < len(config):
+        out.append(f"The last crawl covered only: {', '.join(run_sites)} (\"–\" = site not in the last crawl).")
     if stats:
         out.append(f"The last crawl took **{fmt_duration(stats.get('duration_seconds', 0))}**, "
                    f"sent {stats.get('requests', 0):,} requests and finished with reason "
@@ -63,17 +71,27 @@ def build_report(pages_file, stats_file):
     out.append("")
 
     out += ["## Pages per site", "",
-            "| Site | Seed URL | Pages | Avg. words / page | Total words | Page limit (per run) | Download errors (last run) |",
-            "| --- | --- | ---: | ---: | ---: | ---: | ---: |"]
+            "| Site | Seed URL | Pages | Avg. words / page | Total words | Target size | New (last run) | Updated (last run) | Unchanged (last run) | Download errors (last run) |",
+            "| --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |"]
     for name in order:
         s = per_site.get(name, {"pages": 0, "words": 0})
         r = run_sites.get(name, {})
+        c = config.get(name)
+        seed = r.get("seed") or (c.start_url if c else "")
+        target = r.get("max_pages") or (c.max_pages if c else "")
         avg = s["words"] // s["pages"] if s["pages"] else 0
-        out.append(f"| {name} | {r.get('seed', '')} | {s['pages']:,} | {avg:,} | {s['words']:,} | "
-                   f"{r.get('max_pages', '')} | {r.get('errors', '')} |")
+        if r:
+            last = f"{r.get('new', r.get('saved', 0))} | {r.get('updated', 0)} | {r.get('unchanged', 0)} | {r.get('errors', 0)}"
+        else:
+            last = "– | – | – | –"
+        out.append(f"| {name} | {seed} | {s['pages']:,} | {avg:,} | {s['words']:,} | {target} | {last} |")
+
+    def total(key):
+        return sum(r.get(key, 0) for r in run_sites.values())
     out.append(f"| **Total** | | **{total_pages:,}** | "
-               f"**{(total_words // total_pages) if total_pages else 0:,}** | **{total_words:,}** | | "
-               f"**{sum(r.get('errors', 0) for r in run_sites.values())}** |")
+               f"**{(total_words // total_pages) if total_pages else 0:,}** | **{total_words:,}** | "
+               f"**{sum(c.max_pages for c in config.values()) or total('max_pages'):,}** | **{total('new') or total('saved'):,}** | **{total('updated'):,}** | "
+               f"**{total('unchanged'):,}** | **{total('errors')}** |")
     out.append("")
 
     if stats:

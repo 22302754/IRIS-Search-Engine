@@ -4,8 +4,8 @@ IRIS - start the crawl.
 Run from the repository root:
     python -m crawler.run_crawl                     # all sites in seeds.txt, limits from sites.json
     python -m crawler.run_crawl --only books,quotes # some sites only
-    python -m crawler.run_crawl --max-pages 20      # quick test: 20 pages per site
-    python -m crawler.run_crawl --fresh             # delete old output first
+    python -m crawler.run_crawl --fresh             # start a new pages.jsonl (database is kept)
+    python -m crawler.run_crawl --max-pages 5 --no-db --out /tmp/test.jsonl --fresh   # quick test
 
 Pages go to crawler/output/pages.jsonl, and to the PostgreSQL `pages` table when
 DATABASE_URL is set (in the shell or in a .env file in the repository root).
@@ -31,6 +31,7 @@ def main(argv=None):
     ap.add_argument("--out", default=str(HERE / "output" / "pages.jsonl"), help="JSON Lines output file")
     ap.add_argument("--stats", default=str(HERE / "output" / "crawl_stats.json"), help="statistics file")
     ap.add_argument("--fresh", action="store_true", help="delete the old JSON Lines file before crawling")
+    ap.add_argument("--no-db", action="store_true", help="do not use PostgreSQL even if DATABASE_URL is set")
     ap.add_argument("--delay", type=float, default=None, help="seconds between requests to the same site")
     ap.add_argument("--log-level", default="INFO")
     args = ap.parse_args(argv)
@@ -39,7 +40,8 @@ def main(argv=None):
         Path(args.out).unlink()
         print(f"Deleted old {args.out}")
 
-    settings = {"IRIS_JSONL_FILE": args.out, "IRIS_STATS_FILE": args.stats, "LOG_LEVEL": args.log_level}
+    settings = {"IRIS_JSONL_FILE": args.out, "IRIS_STATS_FILE": args.stats, "LOG_LEVEL": args.log_level,
+                "IRIS_USE_DB": not args.no_db}
     if args.delay is not None:
         settings["DOWNLOAD_DELAY"] = args.delay
 

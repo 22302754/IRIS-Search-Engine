@@ -5,7 +5,7 @@ Crawls ONE seed site, stops after 20 pages, and prints the title and URL
 of every page. It obeys robots.txt and waits between requests.
 
 Run (from the repository root):
-    scrapy runspider crawler/test_spider.py -a start_url=https://books.toscrape.com/ -O crawler/sample_pages.json
+    scrapy runspider crawler/week1/smoke_spider.py -a start_url=https://books.toscrape.com/ -O crawler/week1/sample_pages.json
 """
 from datetime import datetime, timezone
 from urllib.parse import urlparse

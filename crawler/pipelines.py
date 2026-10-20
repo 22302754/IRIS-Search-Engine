@@ -4,8 +4,9 @@ IRIS - where crawled pages are saved.
 PostgresPipeline  -> the `pages` table (only when DATABASE_URL is set, in the shell or in .env)
 JsonLinesPipeline -> crawler/output/pages.jsonl (always; a backup and a file to share with the team)
 
-Both load the pages saved in earlier runs into the spider's duplicate filter,
-so a second crawl only adds new pages.
+Each item has action = "new" (insert) or "update" (the page changed since the last crawl).
+Both pipelines give the spider the pages saved in earlier runs, so a new crawl only adds
+new pages and rewrites changed ones.
 """
 import json
 import os
@@ -16,18 +17,43 @@ ROOT = HERE.parent
 
 # Columns the crawler can fill. Only the ones that exist in the table are written,
 # so the pipeline also works with the minimal contract table pages(id, url, title, text, crawled_at).
-PAGE_COLUMNS = ["url", "site", "title", "description", "language", "text",
-                "word_count", "content_hash", "crawled_at"]
+PAGE_COLUMNS = ["url", "site", "title", "description", "language", "text", "word_count",
+                "content_hash", "etag", "last_modified", "crawled_at", "updated_at"]
+# Columns rewritten when a page changed (url, site and crawled_at stay as they were)
+UPDATE_COLUMNS = ["title", "description", "language", "text", "word_count",
+                  "content_hash", "etag", "last_modified", "updated_at"]
 
-CREATE_PAGES_SQL = (HERE / "pages_table.sql").read_text(encoding="utf-8") \
-    if (HERE / "pages_table.sql").exists() else ""
+CREATE_PAGES_SQL = (HERE / "pages_table.sql").read_text(encoding="utf-8")
+
+# Week 3 columns, added to a table created before them (safe to run many times)
+MIGRATE_SQL = """
+ALTER TABLE pages ADD COLUMN IF NOT EXISTS etag          TEXT;
+ALTER TABLE pages ADD COLUMN IF NOT EXISTS last_modified TEXT;
+ALTER TABLE pages ADD COLUMN IF NOT EXISTS updated_at    TIMESTAMPTZ;
+CREATE INDEX IF NOT EXISTS pages_updated_at_idx ON pages (updated_at);
+"""
 
 
 def ensure_pages_table(cur):
-    """Create the pages table only if it does not exist yet (never touches the team's own table)."""
+    """Create the pages table if needed, and add the week 3 columns to an older table."""
     cur.execute("SELECT to_regclass('pages')")
     if cur.fetchone()[0] is None:
         cur.execute(CREATE_PAGES_SQL)
+    else:
+        cur.execute(MIGRATE_SQL)
+
+
+def table_columns(cur):
+    cur.execute("SELECT column_name FROM information_schema.columns "
+                "WHERE table_schema = current_schema() AND table_name = 'pages'")
+    return {row[0] for row in cur.fetchall()}
+
+
+def known_pages(cur, existing):
+    """Rows of url, content_hash, etag, last_modified for the pages already in the table."""
+    cols = ["url"] + [c for c in ("content_hash", "etag", "last_modified") if c in existing]
+    cur.execute(f"SELECT {', '.join(cols)} FROM pages")
+    return [dict(zip(cols, row)) for row in cur.fetchall()]
 
 
 def database_url():
@@ -43,18 +69,47 @@ def database_url():
     return None
 
 
+def read_jsonl(path):
+    """Pages of a JSON Lines file, newest record per URL (later lines replace earlier ones)."""
+    pages = {}
+    path = Path(path)
+    if not path.exists():
+        return pages
+    with path.open(encoding="utf-8") as fh:
+        for line in fh:
+            line = line.strip()
+            if not line:
+                continue
+            try:
+                row = json.loads(line)
+            except json.JSONDecodeError:
+                continue
+            if row.get("url"):
+                pages[row["url"]] = row
+    return pages
+
+
 # --------------------------------------------------------------------------- PostgreSQL
 class PostgresPipeline:
     BATCH = 25
 
     def __init__(self):
         self.conn = None
-        self.columns = []
         self.pending = 0
         self.inserted = 0
+        self.updated = 0
+
+    @classmethod
+    def from_crawler(cls, crawler):
+        pipe = cls()
+        pipe.crawler = crawler
+        return pipe
 
     def open_spider(self, spider=None):
-        spider = spider or self.spider
+        spider = spider or self.crawler.spider
+        if not self.crawler.settings.getbool("IRIS_USE_DB", True):
+            spider.logger.info("--no-db: PostgreSQL is not used in this run.")
+            return
         url = database_url()
         if not url:
             spider.logger.warning("DATABASE_URL not set -> pages are saved to JSON Lines only.")
@@ -62,8 +117,7 @@ class PostgresPipeline:
         try:
             import psycopg2
         except ImportError:
-            spider.logger.warning("psycopg2 is not installed -> pages are saved to JSON Lines only. "
-                                  "Run: pip install psycopg2-binary")
+            spider.logger.warning("psycopg2 is not installed -> JSON Lines only. Run: pip install psycopg2-binary")
             return
         try:
             self.conn = psycopg2.connect(url)
@@ -74,33 +128,33 @@ class PostgresPipeline:
 
         with self.conn.cursor() as cur:
             ensure_pages_table(cur)
-            cur.execute("SELECT column_name FROM information_schema.columns "
-                        "WHERE table_schema = current_schema() AND table_name = 'pages'")
-            existing = {row[0] for row in cur.fetchall()}
-            self.columns = [c for c in PAGE_COLUMNS if c in existing]
-            missing = [c for c in PAGE_COLUMNS if c not in existing]
-            if missing:
-                spider.logger.warning("pages table has no column(s) %s; they are not saved.", missing)
-
-            hash_col = "content_hash" if "content_hash" in existing else "NULL"
-            cur.execute(f"SELECT url, {hash_col} FROM pages")
-            rows = cur.fetchall()
+            existing = table_columns(cur)
+            rows = known_pages(cur, existing)
         self.conn.commit()
-        spider.dedup.load(urls=(r[0] for r in rows), hashes=(r[1] for r in rows))
+        self.insert_cols = [c for c in PAGE_COLUMNS if c in existing]
+        self.update_cols = [c for c in UPDATE_COLUMNS if c in existing]
+        missing = [c for c in PAGE_COLUMNS if c not in existing]
+        if missing:
+            spider.logger.warning("pages table has no column(s) %s; they are not saved.", missing)
+        spider.load_known(rows)
         spider.logger.info("PostgreSQL connected: %d pages already in the table.", len(rows))
 
-        cols = ", ".join(self.columns)
-        marks = ", ".join(["%s"] * len(self.columns))
-        self.insert_sql = f"INSERT INTO pages ({cols}) VALUES ({marks})"
+        self.insert_sql = (f"INSERT INTO pages ({', '.join(self.insert_cols)}) "
+                           f"VALUES ({', '.join(['%s'] * len(self.insert_cols))})")
+        self.update_sql = (f"UPDATE pages SET {', '.join(c + ' = %s' for c in self.update_cols)} "
+                           f"WHERE url = %s")
 
     def process_item(self, item, spider=None):
         if self.conn is None:
             return item
         with self.conn.cursor() as cur:
-            # check first, so it also works if the team's table has no UNIQUE constraint on url
             cur.execute("SELECT 1 FROM pages WHERE url = %s", [item["url"]])
-            if cur.fetchone() is None:
-                cur.execute(self.insert_sql, [item.get(c) for c in self.columns])
+            exists = cur.fetchone() is not None
+            if exists and item.get("action") == "update":
+                cur.execute(self.update_sql, [item.get(c) for c in self.update_cols] + [item["url"]])
+                self.updated += 1
+            elif not exists:
+                cur.execute(self.insert_sql, [item.get(c) for c in self.insert_cols])
                 self.inserted += 1
         self.pending += 1
         if self.pending >= self.BATCH:
@@ -109,27 +163,18 @@ class PostgresPipeline:
         return item
 
     def close_spider(self, spider=None):
-        spider = spider or self.spider
+        spider = spider or self.crawler.spider
         if self.conn is None:
             return
         self.conn.commit()
         self.conn.close()
-        spider.logger.info("PostgreSQL: %d new rows inserted into pages.", self.inserted)
-
-    @classmethod
-    def from_crawler(cls, crawler):
-        pipe = cls()
-        pipe.crawler = crawler
-        return pipe
-
-    @property
-    def spider(self):
-        return self.crawler.spider
+        spider.logger.info("PostgreSQL: %d new rows inserted, %d changed rows updated.",
+                           self.inserted, self.updated)
 
 
 # --------------------------------------------------------------------------- JSON Lines
 class JsonLinesPipeline:
-    """Appends one JSON object per line. Delete the file (or use --fresh) to start over."""
+    """Appends one JSON object per line (new and changed pages). Use --fresh to start over."""
 
     def __init__(self, path):
         self.path = Path(path)
@@ -142,26 +187,14 @@ class JsonLinesPipeline:
         pipe.crawler = crawler
         return pipe
 
-    def _spider(self, spider):
-        return spider or getattr(self.crawler, "spider", None)
-
     def open_spider(self, spider=None):
-        spider = self._spider(spider)
+        spider = spider or self.crawler.spider
         self.path.parent.mkdir(parents=True, exist_ok=True)
-        urls, hashes = [], []
-        if self.path.exists():
-            with self.path.open(encoding="utf-8") as fh:
-                for line in fh:
-                    try:
-                        row = json.loads(line)
-                    except json.JSONDecodeError:
-                        continue
-                    urls.append(row.get("url"))
-                    hashes.append(row.get("content_hash"))
-        spider.dedup.load(urls=urls, hashes=hashes)
-        if urls:
-            spider.logger.info("JSON Lines: %d pages already in %s (new pages are appended).",
-                               len(urls), self.path)
+        old = read_jsonl(self.path)
+        spider.load_known(old.values())
+        if old:
+            spider.logger.info("JSON Lines: %d pages already in %s (new and changed pages are appended).",
+                               len(old), self.path)
         self.file = self.path.open("a", encoding="utf-8")
 
     def process_item(self, item, spider=None):
@@ -170,7 +203,7 @@ class JsonLinesPipeline:
         return item
 
     def close_spider(self, spider=None):
-        spider = self._spider(spider)
+        spider = spider or self.crawler.spider
         if self.file:
             self.file.close()
-        spider.logger.info("JSON Lines: %d new pages written to %s", self.written, self.path)
+        spider.logger.info("JSON Lines: %d records written to %s", self.written, self.path)

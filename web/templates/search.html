@@ -18,6 +18,11 @@
   </header>
 
   <main class="search-page">
+    <div class="hero-brand" aria-label="IRIS Search Engine">
+      <img class="hero-brand-symbol" src="{{ url_for('static', filename='iris-logo.svg') }}" alt="">
+      <h1>IRIS</h1>
+    </div>
+
     <form action="{{ url_for('results') }}" method="get" class="search-form">
       <label class="visually-hidden" for="search-query">Search terms</label>
       <div class="search-control">

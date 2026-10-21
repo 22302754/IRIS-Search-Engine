@@ -6,14 +6,40 @@
   <title>IRIS Search</title>
   <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
-<body>
+<body class="search-view">
+  <header class="site-header">
+    <a class="wordmark" href="{{ url_for('home') }}" aria-label="IRIS home">
+      <span class="wordmark-mark" aria-hidden="true">I</span>
+      <span>IRIS</span>
+    </a>
+    <p class="header-index">INFORMATION RETRIEVAL <span>/</span> 01</p>
+  </header>
+
   <main class="search-page">
-    <h1 class="logo">IRIS</h1>
-    <p class="tagline">Search the pages we crawled</p>
+    <div class="search-intro">
+      <p class="eyebrow">A FIELD GUIDE TO THE WEB</p>
+      <h1>IRIS<span class="title-mark">.</span></h1>
+      <p class="tagline">Find the signal in the noise.</p>
+    </div>
+
     <form action="{{ url_for('results') }}" method="get" class="search-form">
-      <input type="text" name="q" placeholder="Type your search..." autofocus>
-      <button type="submit">Search</button>
+      <label class="visually-hidden" for="search-query">Search terms</label>
+      <div class="search-control">
+        <span class="search-icon" aria-hidden="true"></span>
+        <input id="search-query" type="text" name="q" placeholder="Search by topic, name, or phrase" autofocus>
+        <button type="submit">Search <span aria-hidden="true">&rarr;</span></button>
+      </div>
     </form>
+
+    <div class="search-footnote">
+      <span class="index-status"><span class="status-dot" aria-hidden="true"></span> INDEX READY</span>
+      <span>Browse, compare, discover</span>
+    </div>
   </main>
+
+  <footer class="site-footer">
+    <span>IRIS / SEARCH INDEX</span>
+    <span>BUILT FOR CURIOSITY</span>
+  </footer>
 </body>
 </html>

@@ -6,49 +6,81 @@
   <title>IRIS Results</title>
   <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
-<body>
-  <header class="top-bar">
-    <a href="{{ url_for('home') }}" class="logo-small">IRIS</a>
+<body class="results-view">
+  <header class="site-header results-header">
+    <a class="wordmark" href="{{ url_for('home') }}" aria-label="IRIS home">
+      <span class="wordmark-mark" aria-hidden="true">I</span>
+      <span>IRIS</span>
+    </a>
     <form action="{{ url_for('results') }}" method="get" class="search-form">
-      <input type="text" name="q" value="{{ query }}">
-      <button type="submit">Search</button>
+      <label class="visually-hidden" for="search-query">Search terms</label>
+      <div class="search-control compact">
+        <span class="search-icon" aria-hidden="true"></span>
+        <input id="search-query" type="text" name="q" value="{{ query }}" placeholder="Search the index">
+        <button type="submit">Search <span aria-hidden="true">&rarr;</span></button>
+      </div>
     </form>
+    <p class="header-index">IRIS <span>/</span> INDEX</p>
   </header>
 
   <main class="results-page">
+    <section class="results-intro">
+      <div>
+        <p class="eyebrow">INDEX / SEARCH RESULTS</p>
+        <h1>Results for <span class="query-text">&quot;{{ query }}&quot;</span></h1>
+      </div>
+      <p class="result-count">{{ total }} results</p>
+    </section>
+
     {% if total == 0 %}
       <div class="no-results">
+        <span class="empty-index" aria-hidden="true">0</span>
+        <div>
+          <p class="eyebrow">NO MATCHES</p>
         <h2>No results found</h2>
         <p>Try different words or check your spelling.</p>
+        </div>
       </div>
     {% else %}
-      <p class="result-count">{{ total }} results</p>
+      <section class="result-list" aria-label="Search results">
+        {% for r in results %}
+        <article class="result">
+          <span class="result-number">{{ "%02d"|format(loop.index + ((page - 1) * 10)) }}</span>
+          <div class="result-body">
+            <a class="result-title" href="{{ r.url }}">{{ r.title }}</a>
+            <p class="result-url">{{ r.url }}</p>
+            <p class="result-snippet">{{ r.snippet }}</p>
+            <div class="result-meta">
+              <span class="result-score">Relevance <b>{{ "%.4f"|format(r.score) }}</b></span>
+              <span class="result-source">IRIS INDEX</span>
+            </div>
+          </div>
+          <span class="result-arrow" aria-hidden="true">&nearr;</span>
+        </article>
+        {% endfor %}
+      </section>
 
-      {% for r in results %}
-      <div class="result">
-        <a class="result-title" href="{{ r.url }}">{{ r.title }}</a>
-        <div class="result-url">{{ r.url }}</div>
-        <p class="result-snippet">{{ r.snippet }}</p>
-        <span class="result-score">Score: {{ "%.4f"|format(r.score) }}</span>
-      </div>
-      {% endfor %}
-
-      <nav class="paging">
+      <nav class="paging" aria-label="Result pages">
         {% if page > 1 %}
-          <a class="page-link" href="{{ url_for('results', q=query, page=page-1) }}">Previous</a>
+          <a class="page-link" href="{{ url_for('results', q=query, page=page-1) }}"><span aria-hidden="true">&larr;</span> Previous</a>
         {% else %}
-          <span class="page-link disabled">Previous</span>
+          <span class="page-link disabled"><span aria-hidden="true">&larr;</span> Previous</span>
         {% endif %}
 
         <span class="page-current">Page {{ page }} of {{ total_pages }}</span>
 
         {% if page < total_pages %}
-          <a class="page-link" href="{{ url_for('results', q=query, page=page+1) }}">Next</a>
+          <a class="page-link" href="{{ url_for('results', q=query, page=page+1) }}">Next <span aria-hidden="true">&rarr;</span></a>
         {% else %}
-          <span class="page-link disabled">Next</span>
+          <span class="page-link disabled">Next <span aria-hidden="true">&rarr;</span></span>
         {% endif %}
       </nav>
     {% endif %}
   </main>
+
+  <footer class="site-footer results-footer">
+    <span>IRIS / SEARCH INDEX</span>
+    <span>{{ total }} RECORDS</span>
+  </footer>
 </body>
 </html>

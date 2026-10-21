@@ -8,18 +8,16 @@
 </head>
 <body class="search-view">
   <header class="site-header">
-    <a class="wordmark" href="{{ url_for('home') }}" aria-label="IRIS home">
-      <span class="wordmark-mark" aria-hidden="true">I</span>
-      <span>IRIS</span>
+    <a class="brand-lockup" href="{{ url_for('home') }}" aria-label="IRIS Search Engine home">
+      <img class="brand-symbol" src="{{ url_for('static', filename='iris-logo.svg') }}" alt="">
+      <span class="brand-copy">
+        <span class="brand-name">IRIS</span>
+        <span class="brand-descriptor">Search Engine</span>
+      </span>
     </a>
-    <p class="header-index">INFORMATION RETRIEVAL <span>/</span> 01</p>
   </header>
 
   <main class="search-page">
-    <div class="search-intro">
-      <h1>IRIS<span class="title-mark">.</span></h1>
-    </div>
-
     <form action="{{ url_for('results') }}" method="get" class="search-form">
       <label class="visually-hidden" for="search-query">Search terms</label>
       <div class="search-control">

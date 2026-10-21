@@ -120,13 +120,6 @@ a { color: inherit; }
 
 .title-mark { color: var(--coral); }
 
-.tagline {
-  margin: 16px 0 0;
-  color: var(--muted);
-  font-family: var(--serif);
-  font-size: 25px;
-}
-
 .search-form { width: 100%; }
 
 .search-control {
@@ -389,7 +382,6 @@ a.page-link:hover { border-color: var(--forest); background: #eaf0e8; }
   .header-index { font-size: 9px; }
   .search-page { min-height: calc(100vh - 132px); padding: 68px 22px 76px; }
   .search-intro h1 { font-size: 76px; }
-  .tagline { font-size: 21px; }
   .search-control { gap: 11px; }
   .search-control input { font-size: 14px; }
   .search-control button { min-width: 96px; gap: 8px; font-size: 13px; }

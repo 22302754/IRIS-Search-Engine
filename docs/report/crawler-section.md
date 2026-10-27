@@ -2,7 +2,7 @@
 
 Author: Mohammed Nouri (Crawler & Infrastructure) · For the final report, chapter "System Design and Implementation"
 
-> Numbers from the crawls of 18 and 20 October 2026 (`docs/crawl-report.md`, `docs/week2-crawler-submission.md`).
+> Numbers from the crawls of 18 and 20 October 2026 (`docs/crawl-report.md`, `docs/weekly/week2-crawler-submission.md`).
 
 ## Purpose of the Crawler
 

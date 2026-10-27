@@ -5,6 +5,18 @@ Owner: Mohammed (Crawler & Infrastructure)
 One PostgreSQL database in the cloud that the whole team (and the final demo) uses, so everyone
 searches the same pages and the same index. Free tier, no credit card.
 
+## Our database
+
+| Item | Value |
+| --- | --- |
+| Service | Supabase (free plan) |
+| Project | `iris-search-engine` (ref `qmmueskxbyftkfxoznor`) |
+| Region | Frankfurt (`eu-central-1`) |
+| Created | 20 October 2026 by Mohammed |
+| Tables | `pages`, `terms`, `postings`, `page_norms` (as in `docs/contracts.md`), row-level security on |
+
+The connection string and password are shared privately by Mohammed – never in Git or the group chat.
+
 ## Which service
 
 | Service | Free storage | Notes |

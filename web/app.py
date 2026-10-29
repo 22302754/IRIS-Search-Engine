@@ -24,7 +24,7 @@ def _snippet(description, text):
     return re.sub(r"\s+", " ", content).strip()[:SNIPPET_LENGTH]
 
 
-def _search_database(query):
+def _search_database(query, page=1):
     database_url = os.environ.get("DATABASE_URL")
     if not database_url:
         raise SearchBackendUnavailable("Search database is not configured")
@@ -37,27 +37,22 @@ def _search_database(query):
 
     try:
         with closing(psycopg2.connect(database_url)) as connection:
-            with connection.cursor() as cursor:
-                cursor.execute("SELECT COUNT(*) FROM pages")
-                document_count = cursor.fetchone()[0]
+            ranked_pages = rank(query, k=None, connection=connection)
+            total = len(ranked_pages)
+            total_pages = max(1, math.ceil(total / PER_PAGE))
+            page = min(max(page, 1), total_pages)
+            start = (page - 1) * PER_PAGE
+            page_results = ranked_pages[start:start + PER_PAGE]
+            page_ids = [page_id for page_id, _ in page_results]
 
-        if not document_count:
-            return []
-
-        ranked_pages = rank(query, k=document_count)
-        if not ranked_pages:
-            return []
-
-        page_ids = [page_id for page_id, _ in ranked_pages]
-        with closing(psycopg2.connect(database_url)) as connection:
             with connection.cursor() as cursor:
                 cursor.execute(
                     """
-                    SELECT id, title, url, description, text
+                    SELECT id, title, url, description, LEFT(text, %s)
                     FROM pages
                     WHERE id = ANY(%s)
                     """,
-                    (page_ids,),
+                    (SNIPPET_LENGTH, page_ids),
                 )
                 pages = {
                     row[0]: {
@@ -71,16 +66,29 @@ def _search_database(query):
     except psycopg2.Error as exc:
         raise SearchBackendUnavailable("Search database is unavailable") from exc
 
-    return [
-        {**pages[page_id], "score": float(score)}
-        for page_id, score in ranked_pages
-        if page_id in pages
-    ]
+    return {
+        "query": query,
+        "total": total,
+        "page": page,
+        "per_page": PER_PAGE,
+        "time_ms": 0,
+        "results": [
+            {**pages[page_id], "score": float(score)}
+            for page_id, score in page_results
+            if page_id in pages
+        ],
+        "total_pages": total_pages,
+    }
 
 
 def execute_search(query, page=1):
     started = perf_counter()
-    provider = app.config.get("SEARCH_PROVIDER") or _search_database
+    provider = app.config.get("SEARCH_PROVIDER")
+    if provider is None:
+        payload = _search_database(query, page)
+        payload["time_ms"] = round((perf_counter() - started) * 1000)
+        return payload
+
     ranked_results = provider(query)
     total = len(ranked_results)
     total_pages = max(1, math.ceil(total / PER_PAGE))

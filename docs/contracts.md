@@ -12,10 +12,10 @@ crawler ──► pages table ──► indexer ──► terms + postings ─�
 | # | Between | Contract | Status |
 | --- | --- | --- | --- |
 | 1 | Crawler → Indexer | `pages` table (below) | Done – `crawler/pages_table.sql` |
-| 2 | Pre-processing → Indexer and Ranker | `preprocess(text) -> list[str]` | Week 2 – AI Engineer |
-| 3 | Indexer → Ranker | `terms` and `postings` tables (below) | Week 3 – SE #1 |
-| 4 | Ranker → API | `rank(query, k=10) -> list[tuple[int, float]]` | Week 3 – AI Engineer |
-| 5 | API → Interface | `GET /search?q=...&page=1` JSON (below) | Week 3 – SE #1 / SE #2 |
+| 2 | Pre-processing → Indexer and Ranker | `preprocess(text) -> list[str]` | Done |
+| 3 | Indexer → Ranker | `terms` and `postings` tables (below) | Done |
+| 4 | Ranker → API | `rank(query, k=10) -> list[tuple[int, float]]` | Done |
+| 5 | API → Interface | `GET /search?q=...&page=1` JSON (below) | Done |
 
 ## 1. `pages` table (filled by the crawler)
 

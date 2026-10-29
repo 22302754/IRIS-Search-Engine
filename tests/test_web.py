@@ -1,6 +1,6 @@
 import pytest
 
-from web.app import app
+from web.app import SearchBackendUnavailable, app
 
 
 def make_results(count=25):
@@ -112,7 +112,11 @@ def test_empty_query_shows_no_results():
     assert "No results found" in response.get_data(as_text=True)
 
 
-def test_results_show_backend_unavailable_state():
+def test_results_show_backend_unavailable_state(monkeypatch):
+    def unavailable_provider(query):
+        raise SearchBackendUnavailable("test backend unavailable")
+
+    monkeypatch.setitem(app.config, "SEARCH_PROVIDER", unavailable_provider)
     response = get_page("/results?q=crawler")
     assert response.status_code == 503
     assert b"Search is unavailable" in response.data

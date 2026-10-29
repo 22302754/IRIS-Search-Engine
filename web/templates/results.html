@@ -31,16 +31,28 @@
         <p class="eyebrow">INDEX / SEARCH RESULTS</p>
         <h1>Results for <span class="query-text">&quot;{{ query }}&quot;</span></h1>
       </div>
-      <p class="result-count">{{ total }} results</p>
+      <p class="result-count">
+        {% if search_error %}
+          Search unavailable
+        {% else %}
+          {{ total }} results <span>· {{ time_ms }} ms</span>
+        {% endif %}
+      </p>
     </section>
 
     {% if total == 0 %}
       <div class="no-results">
         <span class="empty-index" aria-hidden="true">0</span>
         <div>
-          <p class="eyebrow">NO MATCHES</p>
-        <h2>No results found</h2>
-        <p>Try different words or check your spelling.</p>
+          {% if search_error %}
+            <p class="eyebrow">INDEX OFFLINE</p>
+            <h2>Search is unavailable</h2>
+            <p>The search index is not connected yet. Please try again later.</p>
+          {% else %}
+            <p class="eyebrow">NO MATCHES</p>
+            <h2>No results found</h2>
+            <p>Try different words or check your spelling.</p>
+          {% endif %}
         </div>
       </div>
     {% else %}

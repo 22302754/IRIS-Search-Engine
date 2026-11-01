@@ -6,8 +6,8 @@ IRIS - smoke test of the running search engine: 20 queries, response time and re
 
 Uses GET /search?q= (JSON, docs/contracts.md). If /search does not exist yet, it falls back to
 the HTML page /results?q= and reads the result count from the page.
-Queries come from docs/test-queries.md (one per line, "- " bullets allowed) when that file exists,
-otherwise from the 20 built-in queries below. The target is under 1 second per query (NFR-1).
+Queries come from the team's evaluation set docs/test-queries.json when it exists (a plain text or
+Markdown list with one query per line also works), otherwise from the 20 built-in queries below. The target is under 1 second per query (NFR-1).
 """
 import argparse
 import json
@@ -35,6 +35,10 @@ def load_queries(path):
     path = Path(path)
     if not path.exists():
         return DEFAULT_QUERIES
+    if path.suffix == ".json":
+        data = json.loads(path.read_text(encoding="utf-8"))
+        items = data.get("queries", []) if isinstance(data, dict) else data
+        return [item["query"] if isinstance(item, dict) else str(item) for item in items] or DEFAULT_QUERIES
     queries = []
     for line in path.read_text(encoding="utf-8").splitlines():
         line = re.sub(r"^\s*(?:[-*]|\d+[.)])\s*", "", line).strip().strip("`\"")
@@ -114,7 +118,7 @@ def report(base_url, mode, rows):
 def main(argv=None):
     ap = argparse.ArgumentParser(description="Time 20 queries against the IRIS search API.")
     ap.add_argument("--base-url", default="http://127.0.0.1:5000")
-    ap.add_argument("--queries", default=str(ROOT / "docs" / "test-queries.md"))
+    ap.add_argument("--queries", default=str(ROOT / "docs" / "test-queries.json"))
     ap.add_argument("--timeout", type=float, default=30, help="seconds per request (free hosting wakes up slowly)")
     ap.add_argument("--out", default=None, help="also save the report, e.g. docs/smoke-test.md")
     args = ap.parse_args(argv)

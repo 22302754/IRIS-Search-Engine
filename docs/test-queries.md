@@ -31,9 +31,9 @@ of them ranks in the top 10, and how long `rank()` took. A query with **0** rele
 | Q09 | reading and writing files in python | `read write file python` | python-docs | Opening, reading and writing files in Python. | `/tutorial/inputoutput.html` |
 | Q10 | handling exceptions try except | `handl except tri except` | python-docs | Errors and exception handling with try / except. | `/tutorial/errors.html` |
 | Q11 | regular expressions | `regular express` | python-docs, mdn | Regular expressions: Python re, JavaScript RegExp, or the concept. | `/library/re.html`<br>`/howto/regex.html`<br>`Guide/Regular_expressions` |
-| Q12 | css flexbox layout | `css flexbox layout` | mdn | CSS flexible box layout (display: flex). | `flexible_box_layout`<br>`/CSS/flex` |
-| Q13 | javascript promises async await | `javascript promis async await` | mdn | Promises or async / await in JavaScript. | `Global_Objects/Promise`<br>`async_function`<br>`Using_promises` |
-| Q14 | http status code not found | `http statu code found` | mdn | HTTP response status codes, e.g. 404 Not Found. | `Status/404`<br>`/HTTP/Status`<br>`/HTTP/Reference/Status` |
+| Q12 | css flexbox layout | `css flexbox layout` | mdn | CSS flexible box layout (display: flex). | `Flexible_box_layout`<br>`/CSS/flex` |
+| Q13 | javascript click event listener | `javascript click event listen` | mdn | Handling a click (or other DOM) event with an event listener in JavaScript. | `API/Element/click_event`<br>`Document_Object_Model/Events` |
+| Q14 | aria roles accessibility | `aria role access` | mdn | ARIA roles or how they make web pages accessible. | `Accessibility/ARIA/Reference/Roles`<br>`Accessibility/ARIA` |
 | Q15 | create index b-tree postgresql | `creat index b tree postgresql` | postgresql-docs | Creating indexes / B-tree index types in PostgreSQL. | `sql-createindex.html`<br>`indexes-types.html` |
 | Q16 | jsonb operators | `jsonb oper` | postgresql-docs | PostgreSQL JSON / JSONB types or operators. | `functions-json.html`<br>`datatype-json.html` |
 | Q17 | scrapy item pipeline | `scrapi item pipelin` | scrapy-docs | Scrapy item pipelines. | `/topics/item-pipeline.html` |
@@ -43,8 +43,7 @@ of them ranks in the top 10, and how long `rank()` took. A query with **0** rele
 
 **Mix.** IR topics (Q01–Q07) are covered by both the IR book and Wikipedia; Q08–Q16 target the programming and
 database documentation; Q17–Q20 are short "known item" searches for one specific page. Q11 is ambiguous on
-purpose: relevant pages exist on two sites. Numbers are removed by `preprocess()`, so Q14 searches the words
-of "404 Not Found", not the number.
+purpose: relevant pages exist on two sites.
 
 ## Judging relevance (Precision@10)
 
@@ -60,4 +59,11 @@ and the reason here.
 
 ## Changes
 
-- *(none yet)*
+- **1 November 2026, before any judging** (coverage check against the `pages` table):
+  - Q12: the URL part was `flexible_box_layout`, but MDN writes `Flexible_box_layout`; the check was
+    case-sensitive then (it is not any more), so the existing page was not found. URL part corrected,
+    query unchanged.
+  - Q13: `javascript promises async await` → `javascript click event listener`. The collection has no MDN page
+    on promises or async functions (the crawl stops at depth 3).
+  - Q14: `http status code not found` → `aria roles accessibility`. The collection has no MDN page on HTTP
+    status codes.

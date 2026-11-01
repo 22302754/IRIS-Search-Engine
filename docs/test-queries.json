@@ -190,44 +190,41 @@
     "sites": "mdn",
     "relevant_if": "CSS flexible box layout (display: flex).",
     "relevant_url_parts": [
-      "flexible_box_layout",
+      "Flexible_box_layout",
       "/CSS/flex"
     ],
     "judgments": {}
   },
   {
     "id": "Q13",
-    "query": "javascript promises async await",
+    "query": "javascript click event listener",
     "terms": [
       "javascript",
-      "promis",
-      "async",
-      "await"
+      "click",
+      "event",
+      "listen"
     ],
     "sites": "mdn",
-    "relevant_if": "Promises or async / await in JavaScript.",
+    "relevant_if": "Handling a click (or other DOM) event with an event listener in JavaScript.",
     "relevant_url_parts": [
-      "Global_Objects/Promise",
-      "async_function",
-      "Using_promises"
+      "API/Element/click_event",
+      "Document_Object_Model/Events"
     ],
     "judgments": {}
   },
   {
     "id": "Q14",
-    "query": "http status code not found",
+    "query": "aria roles accessibility",
     "terms": [
-      "http",
-      "statu",
-      "code",
-      "found"
+      "aria",
+      "role",
+      "access"
     ],
     "sites": "mdn",
-    "relevant_if": "HTTP response status codes, e.g. 404 Not Found.",
+    "relevant_if": "ARIA roles or how they make web pages accessible.",
     "relevant_url_parts": [
-      "Status/404",
-      "/HTTP/Status",
-      "/HTTP/Reference/Status"
+      "Accessibility/ARIA/Reference/Roles",
+      "Accessibility/ARIA"
     ],
     "judgments": {}
   },

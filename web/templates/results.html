@@ -61,9 +61,9 @@
         <article class="result">
           <span class="result-number">{{ "%02d"|format(loop.index + ((page - 1) * 10)) }}</span>
           <div class="result-body">
-            <a class="result-title" href="{{ r.url }}">{{ r.title }}</a>
+            <a class="result-title" href="{{ r.url }}">{{ r.title|highlight(query) }}</a>
             <p class="result-url">{{ r.url }}</p>
-            <p class="result-snippet">{{ r.snippet }}</p>
+            <p class="result-snippet">{{ r.snippet|highlight(query) }}</p>
             <div class="result-meta">
               <span class="result-score">Relevance <b>{{ "%.4f"|format(r.score) }}</b></span>
               <span class="result-source">IRIS INDEX</span>

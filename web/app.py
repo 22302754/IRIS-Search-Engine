@@ -5,6 +5,7 @@ from time import perf_counter
 
 from dotenv import load_dotenv
 from flask import Flask, jsonify, render_template, request
+from markupsafe import Markup, escape
 
 load_dotenv()
 
@@ -14,18 +15,66 @@ except ImportError:
     pass
 
 app = Flask(__name__)
+app.jinja_env.filters["highlight"] = lambda value, query: highlight(value, query)
 
 PER_PAGE = 10
-SNIPPET_LENGTH = 240
+SNIPPET_WORDS = 30          # words shown around the first query word
+SNIPPET_BEFORE = 10         # words kept before it
+TEXT_FOR_SNIPPET = 20000    # characters of page text read for the snippet
 
 
 class SearchBackendUnavailable(RuntimeError):
     pass
 
 
-def _snippet(description, text):
-    content = description or text or ""
-    return re.sub(r"\s+", " ", content).strip()[:SNIPPET_LENGTH]
+def _query_terms(query):
+    """The query's terms exactly as the ranker searches for them (same preprocess)."""
+    try:
+        from preprocessing.preprocess import preprocess
+    except ImportError:
+        return {word.lower() for word in re.findall(r"[A-Za-z]+", query or "")}
+    return set(preprocess(query or ""))
+
+
+def _is_query_word(word, terms):
+    """True when a word of the page is one of the query terms after stemming."""
+    letters = re.sub(r"[^a-z]", "", word.lower())
+    if not letters or not terms:
+        return False
+    # quick test first: a Porter stem almost always starts like the word itself
+    if not any(letters.startswith(term[:3]) for term in terms):
+        return False
+    try:
+        from preprocessing.preprocess import preprocess
+        return any(token in terms for token in preprocess(letters))
+    except ImportError:
+        return letters in terms
+
+
+def _snippet(description, text, query=""):
+    """About 30 words of the page around the first query word; the description or the start of the text
+    when the page does not contain a query word."""
+    words = (text or "").split()
+    terms = _query_terms(query)
+    for i, word in enumerate(words):
+        if _is_query_word(word, terms):
+            start = max(0, i - SNIPPET_BEFORE)
+            part = words[start:start + SNIPPET_WORDS]
+            prefix = "… " if start > 0 else ""
+            suffix = " …" if start + SNIPPET_WORDS < len(words) else ""
+            return prefix + " ".join(part) + suffix
+    fallback = (description or "").split() or words
+    return " ".join(fallback[:SNIPPET_WORDS]) + (" …" if len(fallback) > SNIPPET_WORDS else "")
+
+
+def highlight(value, query):
+    """HTML-escaped text with the query words in <strong> (used by the results page)."""
+    terms = _query_terms(query)
+    pieces = re.split(r"(\s+)", value or "")
+    return Markup("".join(
+        f"<strong>{escape(piece)}</strong>" if piece.strip() and _is_query_word(piece, terms) else str(escape(piece))
+        for piece in pieces
+    ))
 
 
 _POOL = None
@@ -62,14 +111,14 @@ def _run_search(connection, query, page):
             FROM pages
             WHERE id = ANY(%s)
             """,
-            (SNIPPET_LENGTH, page_ids),
+            (TEXT_FOR_SNIPPET, page_ids),
         )
         pages = {
             row[0]: {
                 "id": row[0],
                 "title": row[1] or row[2],
                 "url": row[2],
-                "snippet": _snippet(row[3], row[4]),
+                "snippet": _snippet(row[3], row[4], query),
             }
             for row in cursor.fetchall()
         }

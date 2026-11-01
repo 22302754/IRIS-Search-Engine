@@ -12,6 +12,7 @@ DATABASE_URL is set (in the shell or in a .env file in the repository root).
 Statistics go to crawler/output/crawl_stats.json; then run:  python -m crawler.crawl_report
 """
 import argparse
+import sys
 from pathlib import Path
 
 from scrapy.crawler import CrawlerProcess
@@ -49,10 +50,18 @@ def main(argv=None):
     scrapy_settings = Settings()
     scrapy_settings.setdict(settings, priority="cmdline")
     process = CrawlerProcess(settings=scrapy_settings)
-    process.crawl(IrisSpider, seeds=args.seeds, sites=args.sites,
+    crawler = process.create_crawler(IrisSpider)
+    process.crawl(crawler, seeds=args.seeds, sites=args.sites,
                   only=args.only or None, max_pages=args.max_pages)
     process.start()
 
+    # A crawl that could not start (e.g. the database refused the connection) must not look successful.
+    stats = crawler.stats.get_stats() if crawler.stats else {}
+    if stats.get("finish_reason") != "finished":
+        print(f"Crawl did not finish normally (reason: {stats.get('finish_reason')}).", file=sys.stderr)
+        return 1
+    return 0
+
 
 if __name__ == "__main__":
-    main()
+    sys.exit(main())

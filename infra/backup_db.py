@@ -39,6 +39,7 @@ def backup(out_root, url=None):
             rows = cur.fetchone()[0]
             manifest["tables"][table] = {"rows": rows, "file": path.name, "bytes": path.stat().st_size}
             print(f"  {table:<11} {rows:>9,} rows  {path.stat().st_size / 1e6:6.1f} MB")
+    conn.rollback()   # end the read transaction at once, so it never holds locks on the tables
     conn.close()
 
     (folder / "schema.sql").write_text(SCHEMA_SQL, encoding="utf-8")

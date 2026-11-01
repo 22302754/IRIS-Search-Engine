@@ -59,3 +59,32 @@ def test_read_pages_fetches_small_keyset_batches():
     assert _read_pages(cursor, batch_size=2) == cursor.rows
     assert [params[0] for _, params in cursor.queries] == [0, 3, 7]
     assert all("WHERE id > %s" in statement for statement, _ in cursor.queries)
+
+
+def test_read_pages_uses_crawl_or_update_timestamp_for_incremental_builds():
+    class Cursor:
+        def __init__(self):
+            self.rows = [(2, "first"), (5, "second")]
+            self.queries = []
+            self.current = []
+
+        def execute(self, statement, params):
+            self.queries.append((statement, params))
+            last_id, after, before, size = params
+            assert after == "last-build"
+            assert before == "build-start"
+            self.current = [row for row in self.rows if row[0] > last_id][:size]
+
+        def fetchall(self):
+            return self.current
+
+    cursor = Cursor()
+
+    assert _read_pages(
+        cursor,
+        updated_after="last-build",
+        updated_before="build-start",
+        batch_size=1,
+    ) == cursor.rows
+    assert all("COALESCE(updated_at, crawled_at) > %s" in sql for sql, _ in cursor.queries)
+    assert all("COALESCE(updated_at, crawled_at) <= %s" in sql for sql, _ in cursor.queries)

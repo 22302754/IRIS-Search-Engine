@@ -23,12 +23,21 @@ jobs:
     env:
       DATABASE_URL: ${{ secrets.DATABASE_URL }}
     steps:
-      - name: Check that the database secret exists
+      - name: Check and clean the database secret
         run: |
           if [ -z "$DATABASE_URL" ]; then
             echo "::error::Add the repository secret DATABASE_URL (Settings > Secrets and variables > Actions)."
             exit 1
           fi
+          # Accept the value even if it was pasted with DATABASE_URL=, quotes, spaces or a line break.
+          url="$(printf '%s' "$DATABASE_URL" | tr -d '"'"'"'[:space:]')"
+          url="${url#DATABASE_URL=}"
+          case "$url" in
+            postgres://*|postgresql://*) ;;
+            *) echo "::error::The DATABASE_URL secret must start with postgresql:// - paste only the connection string."; exit 1 ;;
+          esac
+          echo "::add-mask::$url"
+          echo "DATABASE_URL=$url" >> "$GITHUB_ENV"
 
       - uses: actions/checkout@v4
 
@@ -52,8 +61,8 @@ jobs:
       - name: Summary
         if: always()
         run: |
-          [ -f docs/crawl-report.md ] && cat docs/crawl-report.md >> "$GITHUB_STEP_SUMMARY"
-          [ -f docs/data-quality.md ] && head -n 12 docs/data-quality.md >> "$GITHUB_STEP_SUMMARY"
+          if [ -f docs/crawl-report.md ]; then cat docs/crawl-report.md >> "$GITHUB_STEP_SUMMARY"; fi
+          if [ -f docs/data-quality.md ]; then head -n 12 docs/data-quality.md >> "$GITHUB_STEP_SUMMARY"; fi
 
       - name: Keep the reports and the backup (30 days)
         if: always()

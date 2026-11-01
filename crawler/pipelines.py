@@ -34,12 +34,19 @@ CREATE INDEX IF NOT EXISTS pages_updated_at_idx ON pages (updated_at);
 """
 
 
+WEEK3_COLUMNS = {"etag", "last_modified", "updated_at"}
+
+
 def ensure_pages_table(cur):
-    """Create the pages table if needed, and add the week 3 columns to an older table."""
+    """Create the pages table if needed, and add the week 3 columns to an older table.
+
+    The ALTER statements need an exclusive lock on `pages`, so they run only when a column is really
+    missing, and they give up after 10 s instead of waiting behind another session's open transaction."""
     cur.execute("SELECT to_regclass('pages')")
     if cur.fetchone()[0] is None:
         cur.execute(CREATE_PAGES_SQL)
-    else:
+    elif WEEK3_COLUMNS - table_columns(cur):
+        cur.execute("SET LOCAL lock_timeout = '10s'")
         cur.execute(MIGRATE_SQL)
 
 
@@ -59,7 +66,10 @@ def known_pages(cur, existing):
 def database_url():
     """DATABASE_URL from the environment, or from a .env file in the repository root."""
     if os.environ.get("DATABASE_URL"):
-        return os.environ["DATABASE_URL"]
+        value = os.environ["DATABASE_URL"].strip()
+        if value.startswith("DATABASE_URL="):
+            value = value.split("=", 1)[1]
+        return value.strip().strip('"').strip("'")
     env_file = ROOT / ".env"
     if env_file.exists():
         for line in env_file.read_text(encoding="utf-8").splitlines():

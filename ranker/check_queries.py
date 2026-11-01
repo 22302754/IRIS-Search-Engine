@@ -29,7 +29,7 @@ ROOT = Path(__file__).resolve().parents[1]
 
 def find_relevant(cursor, url_parts):
     cursor.execute(
-        "SELECT id, url FROM pages WHERE url LIKE ANY(%s) ORDER BY id",
+        "SELECT id, url FROM pages WHERE url ILIKE ANY(%s) ORDER BY id",
         ([f"%{part.replace('%', chr(92) + '%').replace('_', chr(92) + '_')}%" for part in url_parts],),
     )
     return cursor.fetchall()

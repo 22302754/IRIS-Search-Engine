@@ -40,13 +40,13 @@ The names, table columns and JSON format that connect the modules are fixed in
 | Crawler – 9 sites, cleaning, duplicates, incremental re-crawl | Mohammed | ✅ Done – **3,769 pages, 6.46 million words** ([crawl report](docs/crawl-report.md)) |
 | Shared database (Supabase PostgreSQL) | Mohammed | ✅ Done |
 | Operations – backups, data-quality check, smoke test, hosting and weekly-crawl files, faster `/search` | Mohammed | ✅ Done ([deployment](docs/deployment.md)) |
-| Search page and results page | Elpi | ✅ Done with live database results |
+| Search page and results page – snippet around the query words, shown in bold | Elpi | ✅ Done with live database results |
 | `preprocess(text)` | Yazen | ✅ Done |
-| Indexer `python3 -m indexer.build` | Hani | ✅ Done |
-| `rank(query, k)` | Yazen | ✅ Done |
+| Indexer `python3 -m indexer.build` – incremental ([schema](docs/schema.sql)) | Hani | ✅ Done |
+| `rank(query, k)` – hand-calculated tests, 20 test queries ([test queries](docs/test-queries.md)) | Yazen | ✅ Done |
 | `GET /search` JSON API | Hani | ✅ Done |
 | Live search verified against 3,769 indexed pages | Elpi | ✅ Done |
-| GitHub Actions tests | Elpi | ⏳ Not configured; all 48 repository tests pass locally |
+| GitHub Actions tests – 104 tests on every pull request ([testing](docs/report/testing-section.md)) | Elpi | ✅ Done |
 
 ## Roadmap
 

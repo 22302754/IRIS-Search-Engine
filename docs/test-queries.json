@@ -1,0 +1,327 @@
+[
+  {
+    "id": "Q01",
+    "query": "inverted index",
+    "terms": [
+      "invert",
+      "index"
+    ],
+    "sites": "ir-book, wikipedia",
+    "relevant_if": "Explains what an inverted index is or how one is built.",
+    "relevant_url_parts": [
+      "a-first-take-at-building-an-inverted-index-1.html",
+      "/wiki/Inverted_index"
+    ],
+    "judgments": {}
+  },
+  {
+    "id": "Q02",
+    "query": "tf idf term weighting",
+    "terms": [
+      "tf",
+      "idf",
+      "term",
+      "weight"
+    ],
+    "sites": "ir-book, wikipedia",
+    "relevant_if": "Defines TF-IDF or explains tf / idf weighting.",
+    "relevant_url_parts": [
+      "tf-idf-weighting-1.html",
+      "/wiki/Tf%E2%80%93idf",
+      "/wiki/Tf–idf"
+    ],
+    "judgments": {}
+  },
+  {
+    "id": "Q03",
+    "query": "cosine similarity vector space model",
+    "terms": [
+      "cosin",
+      "similar",
+      "vector",
+      "space",
+      "model"
+    ],
+    "sites": "ir-book, wikipedia",
+    "relevant_if": "Explains the vector space model or cosine scoring.",
+    "relevant_url_parts": [
+      "dot-products-1.html",
+      "/wiki/Cosine_similarity",
+      "/wiki/Vector_space_model"
+    ],
+    "judgments": {}
+  },
+  {
+    "id": "Q04",
+    "query": "precision and recall",
+    "terms": [
+      "precis",
+      "recal"
+    ],
+    "sites": "ir-book, wikipedia",
+    "relevant_if": "Defines precision and recall or uses them for evaluation.",
+    "relevant_url_parts": [
+      "/wiki/Precision_and_recall",
+      "evaluation-of-unranked-retrieval-sets-1.html"
+    ],
+    "judgments": {}
+  },
+  {
+    "id": "Q05",
+    "query": "web crawler politeness robots",
+    "terms": [
+      "web",
+      "crawler",
+      "polit",
+      "robot"
+    ],
+    "sites": "ir-book, wikipedia",
+    "relevant_if": "How crawlers work, especially politeness and robots.txt.",
+    "relevant_url_parts": [
+      "/wiki/Web_crawler",
+      "/wiki/Robots.txt",
+      "/IR-book/html/htmledition/crawling-1.html"
+    ],
+    "judgments": {}
+  },
+  {
+    "id": "Q06",
+    "query": "pagerank link analysis",
+    "terms": [
+      "pagerank",
+      "link",
+      "analysi"
+    ],
+    "sites": "ir-book, wikipedia",
+    "relevant_if": "PageRank or link-analysis ranking.",
+    "relevant_url_parts": [
+      "/wiki/PageRank",
+      "/IR-book/html/htmledition/pagerank-1.html"
+    ],
+    "judgments": {}
+  },
+  {
+    "id": "Q07",
+    "query": "stemming and lemmatization",
+    "terms": [
+      "stem",
+      "lemmat"
+    ],
+    "sites": "ir-book, wikipedia",
+    "relevant_if": "Stemming or lemmatisation as text normalisation.",
+    "relevant_url_parts": [
+      "stemming-and-lemmatization-1.html",
+      "/wiki/Stemming",
+      "/wiki/Lemmatisation"
+    ],
+    "judgments": {}
+  },
+  {
+    "id": "Q08",
+    "query": "python list comprehension",
+    "terms": [
+      "python",
+      "list",
+      "comprehens"
+    ],
+    "sites": "python-docs",
+    "relevant_if": "Explains or shows Python list comprehensions.",
+    "relevant_url_parts": [
+      "/tutorial/datastructures.html"
+    ],
+    "judgments": {}
+  },
+  {
+    "id": "Q09",
+    "query": "reading and writing files in python",
+    "terms": [
+      "read",
+      "write",
+      "file",
+      "python"
+    ],
+    "sites": "python-docs",
+    "relevant_if": "Opening, reading and writing files in Python.",
+    "relevant_url_parts": [
+      "/tutorial/inputoutput.html"
+    ],
+    "judgments": {}
+  },
+  {
+    "id": "Q10",
+    "query": "handling exceptions try except",
+    "terms": [
+      "handl",
+      "except",
+      "tri",
+      "except"
+    ],
+    "sites": "python-docs",
+    "relevant_if": "Errors and exception handling with try / except.",
+    "relevant_url_parts": [
+      "/tutorial/errors.html"
+    ],
+    "judgments": {}
+  },
+  {
+    "id": "Q11",
+    "query": "regular expressions",
+    "terms": [
+      "regular",
+      "express"
+    ],
+    "sites": "python-docs, mdn",
+    "relevant_if": "Regular expressions: Python re, JavaScript RegExp, or the concept.",
+    "relevant_url_parts": [
+      "/library/re.html",
+      "/howto/regex.html",
+      "Guide/Regular_expressions"
+    ],
+    "judgments": {}
+  },
+  {
+    "id": "Q12",
+    "query": "css flexbox layout",
+    "terms": [
+      "css",
+      "flexbox",
+      "layout"
+    ],
+    "sites": "mdn",
+    "relevant_if": "CSS flexible box layout (display: flex).",
+    "relevant_url_parts": [
+      "flexible_box_layout",
+      "/CSS/flex"
+    ],
+    "judgments": {}
+  },
+  {
+    "id": "Q13",
+    "query": "javascript promises async await",
+    "terms": [
+      "javascript",
+      "promis",
+      "async",
+      "await"
+    ],
+    "sites": "mdn",
+    "relevant_if": "Promises or async / await in JavaScript.",
+    "relevant_url_parts": [
+      "Global_Objects/Promise",
+      "async_function",
+      "Using_promises"
+    ],
+    "judgments": {}
+  },
+  {
+    "id": "Q14",
+    "query": "http status code not found",
+    "terms": [
+      "http",
+      "statu",
+      "code",
+      "found"
+    ],
+    "sites": "mdn",
+    "relevant_if": "HTTP response status codes, e.g. 404 Not Found.",
+    "relevant_url_parts": [
+      "Status/404",
+      "/HTTP/Status",
+      "/HTTP/Reference/Status"
+    ],
+    "judgments": {}
+  },
+  {
+    "id": "Q15",
+    "query": "create index b-tree postgresql",
+    "terms": [
+      "creat",
+      "index",
+      "b",
+      "tree",
+      "postgresql"
+    ],
+    "sites": "postgresql-docs",
+    "relevant_if": "Creating indexes / B-tree index types in PostgreSQL.",
+    "relevant_url_parts": [
+      "sql-createindex.html",
+      "indexes-types.html"
+    ],
+    "judgments": {}
+  },
+  {
+    "id": "Q16",
+    "query": "jsonb operators",
+    "terms": [
+      "jsonb",
+      "oper"
+    ],
+    "sites": "postgresql-docs",
+    "relevant_if": "PostgreSQL JSON / JSONB types or operators.",
+    "relevant_url_parts": [
+      "functions-json.html",
+      "datatype-json.html"
+    ],
+    "judgments": {}
+  },
+  {
+    "id": "Q17",
+    "query": "scrapy item pipeline",
+    "terms": [
+      "scrapi",
+      "item",
+      "pipelin"
+    ],
+    "sites": "scrapy-docs",
+    "relevant_if": "Scrapy item pipelines.",
+    "relevant_url_parts": [
+      "/topics/item-pipeline.html"
+    ],
+    "judgments": {}
+  },
+  {
+    "id": "Q18",
+    "query": "flask blueprints",
+    "terms": [
+      "flask",
+      "blueprint"
+    ],
+    "sites": "flask-docs",
+    "relevant_if": "Flask blueprints.",
+    "relevant_url_parts": [
+      "/blueprints/"
+    ],
+    "judgments": {}
+  },
+  {
+    "id": "Q19",
+    "query": "albert einstein quotes",
+    "terms": [
+      "albert",
+      "einstein",
+      "quot"
+    ],
+    "sites": "quotes",
+    "relevant_if": "Quotes by Albert Einstein or his author page.",
+    "relevant_url_parts": [
+      "/author/Albert-Einstein"
+    ],
+    "judgments": {}
+  },
+  {
+    "id": "Q20",
+    "query": "sapiens brief history of humankind",
+    "terms": [
+      "sapien",
+      "brief",
+      "histori",
+      "humankind"
+    ],
+    "sites": "books",
+    "relevant_if": "The book page for Sapiens: A Brief History of Humankind.",
+    "relevant_url_parts": [
+      "sapiens-a-brief-history-of-humankind"
+    ],
+    "judgments": {}
+  }
+]

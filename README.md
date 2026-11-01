@@ -39,6 +39,7 @@ The names, table columns and JSON format that connect the modules are fixed in
 | --- | --- | --- |
 | Crawler – 9 sites, cleaning, duplicates, incremental re-crawl | Mohammed | ✅ Done – **3,769 pages, 6.46 million words** ([crawl report](docs/crawl-report.md)) |
 | Shared database (Supabase PostgreSQL) | Mohammed | ✅ Done |
+| Operations – backups, data-quality check, smoke test, hosting and weekly-crawl files, faster `/search` | Mohammed | ✅ Done ([deployment](docs/deployment.md)) |
 | Search page and results page | Elpi | ✅ Done with live database results |
 | `preprocess(text)` | Yazen | ✅ Done |
 | Indexer `python3 -m indexer.build` | Hani | ✅ Done |
@@ -112,6 +113,16 @@ DATABASE_URL=postgresql://...
 | [docs/report/](docs/report/) | Draft sections of the final report |
 | [docs/weekly/](docs/weekly/) | Weekly submission notes |
 | [crawler/README.md](crawler/README.md) | How to run the crawler |
+| [docs/deployment.md](docs/deployment.md) | Hosting on Render, weekly crawl, backups, checks |
+
+## Operations (`infra/`)
+
+| Command | What it does |
+| --- | --- |
+| `python3 -m infra.backup_db` | Back up the database to `backups/<date>/` |
+| `python3 -m infra.restore_db backups/<date>` | Restore a backup (safe by default) |
+| `python3 -m infra.check_quality` | Data-quality report → `docs/data-quality.md` |
+| `python3 -m infra.smoke_test --base-url <url>` | Time the 20 test queries against the live site |
 
 ## How we work
 

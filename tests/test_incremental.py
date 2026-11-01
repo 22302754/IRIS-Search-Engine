@@ -115,3 +115,53 @@ def test_real_non_html_is_skipped(tmp_path):
                     headers={"Content-Type": "application/pdf"})
     assert list(spider.parse(resp)) == []
     assert spider.skipped["not_html"] == 1
+
+
+def test_known_page_that_became_a_copy_is_removed(tmp_path):
+    spider = make_spider(tmp_path)
+    same_text = extract_page(html(), "https://site.test/b")["content_hash"]
+    spider.load_known([{"url": "https://site.test/a", "content_hash": content_hash("old a")},
+                       {"url": "https://site.test/b", "content_hash": same_text}])
+    items = pages_of(spider.parse(response("https://site.test/a", html())))   # a now has b's text
+    assert items == [{"url": "https://site.test/a", "site": "site", "action": "delete",
+                      "reason": "duplicate", "updated_at": items[0]["updated_at"]}]
+    assert spider.result["site"]["deleted"] == 1
+
+
+def test_read_jsonl_applies_deletes(tmp_path):
+    from crawler.pipelines import read_jsonl
+    path = tmp_path / "pages.jsonl"
+    path.write_text("\n".join(json.dumps(r) for r in [
+        {"url": "u1", "text": "a"}, {"url": "u2", "text": "b"}, {"url": "u1", "action": "delete"}]) + "\n")
+    deleted = set()
+    assert list(read_jsonl(path, deleted)) == ["u2"]
+    assert deleted == {"u1"}
+
+
+def test_known_page_that_became_too_short_is_removed(tmp_path):
+    spider = make_spider(tmp_path)
+    spider.load_known([{"url": "https://site.test/stub", "content_hash": content_hash("old long text")}])
+    items = pages_of(spider.parse(response("https://site.test/stub", html("Next Up Previous"))))
+    assert items == [{"url": "https://site.test/stub", "site": "site", "action": "delete",
+                      "reason": "thin", "updated_at": items[0]["updated_at"]}]
+    assert spider.result["site"]["deleted"] == 1
+    assert "https://site.test/stub" not in spider.known
+
+
+def test_known_page_that_returns_404_is_removed(tmp_path):
+    from scrapy.spidermiddlewares.httperror import HttpError
+    from twisted.python.failure import Failure
+
+    spider = make_spider(tmp_path)
+    spider.load_known([{"url": "https://site.test/old", "content_hash": "h"}])
+    req = Request("https://site.test/old", meta={"site": "site"})
+    gone = Failure(HttpError(Response("https://site.test/old", status=404, request=req)))
+    gone.request = req
+    items = list(spider.on_error(gone) or [])
+    assert [i["reason"] for i in items] == ["gone"]
+    # an unknown URL that returns 404 is only counted as an error
+    req2 = Request("https://site.test/never", meta={"site": "site"})
+    missing = Failure(HttpError(Response("https://site.test/never", status=404, request=req2)))
+    missing.request = req2
+    assert list(spider.on_error(missing) or []) == []
+    assert spider.errors["site"] == 2

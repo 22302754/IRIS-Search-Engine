@@ -1,13 +1,17 @@
 import math
 import os
 import re
-from contextlib import closing
 from time import perf_counter
 
 from dotenv import load_dotenv
 from flask import Flask, jsonify, render_template, request
 
 load_dotenv()
+
+try:  # loading NLTK takes about a second: do it when the server starts, not on the first search
+    import ranker.rank  # noqa: F401
+except ImportError:
+    pass
 
 app = Flask(__name__)
 
@@ -24,6 +28,54 @@ def _snippet(description, text):
     return re.sub(r"\s+", " ", content).strip()[:SNIPPET_LENGTH]
 
 
+_POOL = None
+_POOL_URL = None
+
+
+def _connection_pool(database_url):
+    """One small pool per worker process: opening a new TLS connection to the cloud database
+    for every search took most of the response time, so connections are reused."""
+    global _POOL, _POOL_URL
+    if _POOL is None or _POOL_URL != database_url:
+        from psycopg2.pool import ThreadedConnectionPool
+
+        _POOL = ThreadedConnectionPool(1, 4, database_url, connect_timeout=10)
+        _POOL_URL = database_url
+    return _POOL
+
+
+def _run_search(connection, query, page):
+    from ranker.rank import rank
+
+    ranked_pages = rank(query, k=None, connection=connection)
+    total = len(ranked_pages)
+    total_pages = max(1, math.ceil(total / PER_PAGE))
+    page = min(max(page, 1), total_pages)
+    start = (page - 1) * PER_PAGE
+    page_results = ranked_pages[start:start + PER_PAGE]
+    page_ids = [page_id for page_id, _ in page_results]
+
+    with connection.cursor() as cursor:
+        cursor.execute(
+            """
+            SELECT id, title, url, description, LEFT(text, %s)
+            FROM pages
+            WHERE id = ANY(%s)
+            """,
+            (SNIPPET_LENGTH, page_ids),
+        )
+        pages = {
+            row[0]: {
+                "id": row[0],
+                "title": row[1] or row[2],
+                "url": row[2],
+                "snippet": _snippet(row[3], row[4]),
+            }
+            for row in cursor.fetchall()
+        }
+    return total, page, total_pages, page_results, pages
+
+
 def _search_database(query, page=1):
     database_url = os.environ.get("DATABASE_URL")
     if not database_url:
@@ -31,40 +83,27 @@ def _search_database(query, page=1):
 
     try:
         import psycopg2
-        from ranker.rank import rank
+        import ranker.rank  # noqa: F401  (fail early if the backend is missing)
     except ImportError as exc:
         raise SearchBackendUnavailable("Search backend is not installed") from exc
 
-    try:
-        with closing(psycopg2.connect(database_url)) as connection:
-            ranked_pages = rank(query, k=None, connection=connection)
-            total = len(ranked_pages)
-            total_pages = max(1, math.ceil(total / PER_PAGE))
-            page = min(max(page, 1), total_pages)
-            start = (page - 1) * PER_PAGE
-            page_results = ranked_pages[start:start + PER_PAGE]
-            page_ids = [page_id for page_id, _ in page_results]
-
-            with connection.cursor() as cursor:
-                cursor.execute(
-                    """
-                    SELECT id, title, url, description, LEFT(text, %s)
-                    FROM pages
-                    WHERE id = ANY(%s)
-                    """,
-                    (SNIPPET_LENGTH, page_ids),
-                )
-                pages = {
-                    row[0]: {
-                        "id": row[0],
-                        "title": row[1] or row[2],
-                        "url": row[2],
-                        "snippet": _snippet(row[3], row[4]),
-                    }
-                    for row in cursor.fetchall()
-                }
-    except psycopg2.Error as exc:
-        raise SearchBackendUnavailable("Search database is unavailable") from exc
+    # Two attempts: a pooled connection may have been closed by the server while idle.
+    for attempt in (1, 2):
+        connection = None
+        broken = False
+        try:
+            pool = _connection_pool(database_url)
+            connection = pool.getconn()
+            connection.autocommit = True
+            total, page, total_pages, page_results, pages = _run_search(connection, query, page)
+            break
+        except psycopg2.Error as exc:
+            broken = True
+            if attempt == 2:
+                raise SearchBackendUnavailable("Search database is unavailable") from exc
+        finally:
+            if connection is not None:
+                _POOL.putconn(connection, close=broken or bool(connection.closed))
 
     return {
         "query": query,

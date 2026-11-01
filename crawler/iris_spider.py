@@ -8,7 +8,9 @@ skips duplicates, and hands each page to the storage pipelines (PostgreSQL + JSO
 Incremental re-crawl: pages saved in earlier runs are loaded at start-up.
   * a known page whose text has not changed is counted as "unchanged" and not written again;
   * a known page whose text changed is written again as an "update" (updated_at = now);
-  * a page never seen before is written as "new".
+  * a page never seen before is written as "new";
+  * a known page that is now too short, a copy of another saved page, or gone (HTTP 404/410)
+    is removed ("delete"), so the collection never keeps stale versions.
 Leaf pages (at the depth limit, so their links are not needed) are requested with
 If-None-Match / If-Modified-Since, so an unchanged page answers "304 Not Modified" with no body.
 max_pages in sites.json is the target size of the collection for a site: old pages count
@@ -164,6 +166,7 @@ class IrisSpider(scrapy.Spider):
         self.result = defaultdict(Counter)   # site -> {"new", "updated", "unchanged"}
         self.skipped = Counter()         # why pages were not saved
         self.errors = Counter()          # failed downloads per site
+        self.removed_reasons = Counter() # thin / duplicate / gone
         self.started = time.time()
 
     # ---- called by the pipelines at start-up with the pages of earlier runs
@@ -191,8 +194,8 @@ class IrisSpider(scrapy.Spider):
         return None
 
     def collection_size(self, site):
-        """Pages of the site in the collection: saved in earlier runs + new in this run."""
-        return self.known_per_site[site] + self.result[site]["new"]
+        """Pages of the site in the collection: saved in earlier runs + new in this run - removed."""
+        return self.known_per_site[site] + self.result[site]["new"] - self.result[site]["deleted"]
 
     def site_is_full(self, site):
         """True when the site may not get any more NEW pages."""
@@ -279,7 +282,10 @@ class IrisSpider(scrapy.Spider):
         """Decide new / updated / unchanged / skipped, and yield the item to store."""
         page = extract_page(html, url)
         if page is None:
-            self.skipped["thin_page"] += 1
+            if url in self.known:             # an old page that is now only a menu or a stub
+                yield self.delete_item(url, site, "thin")
+            else:
+                self.skipped["thin_page"] += 1
             return
         if page["language"] == "unknown":
             page["language"] = rules.language
@@ -291,7 +297,10 @@ class IrisSpider(scrapy.Spider):
         if not old and self.site_is_full(site):
             return
         if not self.dedup.is_new_content(page["content_hash"]):
-            self.skipped["duplicate_text"] += 1
+            if old:                       # its text is now a copy of another page: drop the stale row
+                yield self.delete_item(url, site, "duplicate")
+            else:
+                self.skipped["duplicate_text"] += 1
             return
 
         action = "update" if old else "new"
@@ -315,6 +324,13 @@ class IrisSpider(scrapy.Spider):
                              self.collection_size(site), rules.max_pages, r["new"])
         yield page
 
+    def delete_item(self, url, site, reason):
+        """Item that tells the pipelines to remove an old page from the collection."""
+        self.known.pop(url, None)
+        self.result[site]["deleted"] += 1
+        self.removed_reasons[reason] += 1
+        return {"url": url, "site": site, "action": "delete", "reason": reason, "updated_at": now_iso()}
+
     def on_error(self, failure):
         site = failure.request.meta.get("site", "?")
         # HttpError (404, 500 ...) is a kind of IgnoreRequest, so check it first
@@ -322,6 +338,10 @@ class IrisSpider(scrapy.Spider):
             return                              # dropped on purpose (site limit, robots.txt)
         self.errors[site] += 1
         self.logger.debug("Download failed (%s): %s", site, failure.request.url)
+        if failure.check(HttpError) and failure.value.response.status in (404, 410):
+            url = canonicalize(failure.request.url)
+            if url in self.known:               # the page no longer exists on the site
+                yield self.delete_item(url, site, "gone")
 
     # ---- end of crawl: save statistics for the crawl report
     def closed(self, reason):
@@ -339,6 +359,7 @@ class IrisSpider(scrapy.Spider):
                     "new": self.result[r.name]["new"],
                     "updated": self.result[r.name]["updated"],
                     "unchanged": self.result[r.name]["unchanged"],
+                    "deleted": self.result[r.name]["deleted"],
                     "known_before": self.known_per_site[r.name],
                     "collection": self.collection_size(r.name),
                     "errors": self.errors[r.name],
@@ -346,6 +367,7 @@ class IrisSpider(scrapy.Spider):
                 for r in self.rules
             },
             "skipped": dict(self.skipped),
+            "removed": dict(self.removed_reasons),
             "requests": stats.get("downloader/request_count", 0),
             "responses": stats.get("downloader/response_count", 0),
             "robots_forbidden": stats.get("robotstxt/forbidden", 0),

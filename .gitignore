@@ -221,3 +221,6 @@ __marimo__/
 
 # macOS
 .DS_Store
+
+# Database backups (made by infra/backup_db.py)
+backups/

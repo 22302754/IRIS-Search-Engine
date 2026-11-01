@@ -1,6 +1,6 @@
 import math
 
-from indexer.build import _prepare_index
+from indexer.build import _prepare_index, _read_pages
 from preprocessing.preprocess import preprocess
 
 
@@ -37,3 +37,25 @@ def test_prepare_index_handles_no_documents():
     assert term_frequencies == {}
     assert document_frequencies == {}
     assert norms == {}
+
+
+def test_read_pages_fetches_small_keyset_batches():
+    class Cursor:
+        def __init__(self):
+            self.rows = [(1, "first"), (3, "second"), (7, "third")]
+            self.queries = []
+            self.current = []
+
+        def execute(self, statement, params):
+            self.queries.append((statement, params))
+            last_id, size = params
+            self.current = [row for row in self.rows if row[0] > last_id][:size]
+
+        def fetchall(self):
+            return self.current
+
+    cursor = Cursor()
+
+    assert _read_pages(cursor, batch_size=2) == cursor.rows
+    assert [params[0] for _, params in cursor.queries] == [0, 3, 7]
+    assert all("WHERE id > %s" in statement for statement, _ in cursor.queries)

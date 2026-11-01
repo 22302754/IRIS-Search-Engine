@@ -9,6 +9,28 @@ from psycopg2.extras import execute_values
 from preprocessing.preprocess import preprocess
 
 _BATCH_SIZE = 1000
+_PAGE_FETCH_SIZE = 100
+
+
+def _read_pages(cursor, batch_size=_PAGE_FETCH_SIZE):
+    """Read pages in small keyset-paginated batches.
+
+    The shared Supabase pooler can close a large, long-lived result set. Keeping
+    each result set small makes full-index builds reliable without changing the
+    order or contents of the documents sent to the indexer.
+    """
+    documents = []
+    last_id = 0
+    while True:
+        cursor.execute(
+            "SELECT id, text FROM pages WHERE id > %s ORDER BY id LIMIT %s",
+            (last_id, batch_size),
+        )
+        rows = cursor.fetchall()
+        if not rows:
+            return documents
+        documents.extend(rows)
+        last_id = rows[-1][0]
 
 
 def _prepare_index(documents):
@@ -80,8 +102,7 @@ def build_index(database_url=None):
         with connection:
             with connection.cursor() as cursor:
                 _ensure_schema(cursor)
-                cursor.execute("SELECT id, text FROM pages ORDER BY id")
-                documents = cursor.fetchall()
+                documents = _read_pages(cursor)
 
                 term_frequencies, document_frequencies, norms = _prepare_index(documents)
                 document_count = len(documents)

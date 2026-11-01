@@ -69,8 +69,9 @@ def database_url():
     return None
 
 
-def read_jsonl(path):
-    """Pages of a JSON Lines file, newest record per URL (later lines replace earlier ones)."""
+def read_jsonl(path, deleted=None):
+    """Pages of a JSON Lines file, newest record per URL (later lines replace earlier ones).
+    Records with action "delete" remove the page; pass a set as `deleted` to collect those URLs."""
     pages = {}
     path = Path(path)
     if not path.exists():
@@ -84,8 +85,16 @@ def read_jsonl(path):
                 row = json.loads(line)
             except json.JSONDecodeError:
                 continue
-            if row.get("url"):
+            if not row.get("url"):
+                continue
+            if row.get("action") == "delete":
+                pages.pop(row["url"], None)
+                if deleted is not None:
+                    deleted.add(row["url"])
+            else:
                 pages[row["url"]] = row
+                if deleted is not None:
+                    deleted.discard(row["url"])
     return pages
 
 
@@ -98,6 +107,7 @@ class PostgresPipeline:
         self.pending = 0
         self.inserted = 0
         self.updated = 0
+        self.deleted = 0
 
     @classmethod
     def from_crawler(cls, crawler):
@@ -148,6 +158,11 @@ class PostgresPipeline:
         if self.conn is None:
             return item
         with self.conn.cursor() as cur:
+            if item.get("action") == "delete":
+                cur.execute("DELETE FROM pages WHERE url = %s", [item["url"]])
+                self.deleted += cur.rowcount
+                self.pending += 1
+                return item
             cur.execute("SELECT 1 FROM pages WHERE url = %s", [item["url"]])
             exists = cur.fetchone() is not None
             if exists and item.get("action") == "update":
@@ -168,8 +183,8 @@ class PostgresPipeline:
             return
         self.conn.commit()
         self.conn.close()
-        spider.logger.info("PostgreSQL: %d new rows inserted, %d changed rows updated.",
-                           self.inserted, self.updated)
+        spider.logger.info("PostgreSQL: %d new rows inserted, %d changed rows updated, %d old rows removed.",
+                           self.inserted, self.updated, self.deleted)
 
 
 # --------------------------------------------------------------------------- JSON Lines

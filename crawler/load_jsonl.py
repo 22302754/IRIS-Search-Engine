@@ -29,7 +29,8 @@ def main(argv=None):
     from psycopg2.extras import execute_values
 
     started = time.time()
-    pages = read_jsonl(args.file)              # newest record per URL
+    deleted = set()
+    pages = read_jsonl(args.file, deleted)     # newest record per URL
     conn = psycopg2.connect(url)
     cur = conn.cursor()
     ensure_pages_table(cur)
@@ -49,6 +50,9 @@ def main(argv=None):
 
     if new_rows:                               # one round trip per 500 rows: fast even on a cloud server
         execute_values(cur, f"INSERT INTO pages ({', '.join(insert_cols)}) VALUES %s", new_rows, page_size=500)
+    removed = [[u] for u in deleted if u in in_table]
+    if removed:                                # pages the crawler removed (stub, copy or gone)
+        cur.executemany("DELETE FROM pages WHERE url = %s", removed)
     if changed:
         cur.executemany(f"UPDATE pages SET {', '.join(c + ' = %s' for c in update_cols)} WHERE url = %s", changed)
     conn.commit()
@@ -56,7 +60,8 @@ def main(argv=None):
     total = cur.fetchone()[0]
     conn.close()
     same = len(pages) - len(new_rows) - len(changed)
-    print(f"Added {len(new_rows)} pages, updated {len(changed)} changed pages, skipped {same} unchanged. "
+    print(f"Added {len(new_rows)} pages, updated {len(changed)} changed pages, removed {len(removed)} old pages, "
+          f"skipped {same} unchanged. "
           f"The table now has {total} pages ({time.time() - started:.1f} s).")
 
 

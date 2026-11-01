@@ -56,6 +56,7 @@ roughly 100–200 MB). Both free tiers are enough.
    ALTER TABLE terms      ENABLE ROW LEVEL SECURITY;
    ALTER TABLE postings   ENABLE ROW LEVEL SECURITY;
    ALTER TABLE page_norms ENABLE ROW LEVEL SECURITY;
+   ALTER TABLE index_state ENABLE ROW LEVEL SECURITY;
    ```
 
 6. Check it:

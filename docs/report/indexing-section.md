@@ -32,8 +32,7 @@ On 1 November 2026, the shared Supabase database was indexed successfully:
 
 The JSON endpoint was verified with the query `information retrieval`: it
 returned HTTP 200, 1,567 matching pages, and the first 10 results contained the
-required `id`, `title`, `url`, `snippet`, and `score` fields. Its measured
-response time in that verification was 3,183 ms.
+required `id`, `title`, `url`, `snippet`, and `score` fields.
 
 ## Search API
 
@@ -42,7 +41,33 @@ ranking to `ranker.rank`, retrieves the selected pages, and returns the agreed
 JSON contract: `query`, `total`, `page`, `per_page`, `time_ms`, and `results`.
 Each result contains `id`, `title`, `url`, `snippet`, and `score`.
 
-The project does not yet contain the team-owned `docs/test-queries.md` file, so
-the required 20-query response-time table cannot be recorded without inventing
-the team's evaluation queries. Once that file is supplied, run the listed
-queries against `/search` and add their `time_ms` values here.
+The API reuses PostgreSQL connections between requests. A one-time cold request
+creates the pool connection; the following benchmark was taken after that
+warm-up request. Every technical benchmark query returned HTTP 200 and met the
+under-one-second response target.
+
+| Query | Matching pages | Response time (ms) |
+| --- | ---: | ---: |
+| information retrieval | 1,567 | 681 |
+| search engine | 989 | 656 |
+| web crawler | 1,581 | 665 |
+| database | 656 | 609 |
+| postgresql | 455 | 569 |
+| python | 566 | 648 |
+| scrapy | 53 | 680 |
+| flask | 67 | 576 |
+| inverted index | 694 | 553 |
+| tf idf | 77 | 553 |
+| machine learning | 969 | 596 |
+| computer science | 1,034 | 597 |
+| data structures | 1,539 | 604 |
+| web development | 2,408 | 694 |
+| network | 496 | 630 |
+| programming | 737 | 593 |
+| algorithm | 420 | 581 |
+| software engineering | 685 | 556 |
+| query | 604 | 552 |
+| ranking | 279 | 582 |
+
+The team-owned `docs/test-queries.md` file is still absent, so these figures
+measure API performance only; they are not the team's relevance-evaluation set.

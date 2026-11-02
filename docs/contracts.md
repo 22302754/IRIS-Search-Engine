@@ -23,7 +23,7 @@ crawler ──► pages table ──► indexer ──► terms + postings ─�
 | --- | --- | --- |
 | `id` | SERIAL PRIMARY KEY | used as `page_id` everywhere |
 | `url` | TEXT UNIQUE NOT NULL | canonical URL |
-| `site` | VARCHAR(50) | `books`, `quotes`, `python-docs`, `mdn`, `ir-book`, `wikipedia`, `postgresql-docs`, `scrapy-docs`, `flask-docs` |
+| `site` | VARCHAR(50) | `books`, `quotes`, `python-docs`, `mdn`, `ir-book`, `wikipedia`, `postgresql-docs`, `scrapy-docs`, `flask-docs`, `ciu` |
 | `title` | TEXT | shown in results |
 | `description` | TEXT | meta description, may be empty |
 | `language` | VARCHAR(10) | `en` (site default when the page does not say) |

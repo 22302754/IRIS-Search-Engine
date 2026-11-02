@@ -29,7 +29,7 @@
     {% else %}
       <section class="results-intro">
         <div>
-          <p class="eyebrow">RANKING DETAILS · TF-IDF + COSINE SIMILARITY</p>
+          <p class="eyebrow">RANKING DETAILS · TF-IDF + COSINE SIMILARITY + TITLE BONUS</p>
           <h1>Why <span class="query-text">&quot;{{ data.page.title }}&quot;</span> scored {{ "%.4f"|format(data.score) }}</h1>
           <p class="result-url"><a href="{{ data.page.url }}">{{ data.page.url }}</a> ·
             {{ site_labels.get(data.page.site, data.page.site) }} · {{ "{:,}".format(data.page.words or 0) }} words</p>
@@ -82,7 +82,22 @@
           <tr><td>Dot product (sum of the last column)</td><td><b>{{ "%.4f"|format(data.dot) }}</b></td></tr>
           <tr><td>|q| = length of the query vector</td><td><b>{{ "%.4f"|format(data.query_norm) }}</b></td></tr>
           <tr><td>|d| = length of the page vector (all its terms, stored in <code>page_norms</code>)</td><td><b>{{ "%.4f"|format(data.page_norm) }}</b></td></tr>
-          <tr class="total"><td>score = dot / (|q| × |d|) = {{ "%.4f"|format(data.dot) }} / ({{ "%.4f"|format(data.query_norm) }} × {{ "%.4f"|format(data.page_norm) }})</td>
+          <tr class="total"><td>cosine = dot / (|q| × |d|) = {{ "%.4f"|format(data.dot) }} / ({{ "%.4f"|format(data.query_norm) }} × {{ "%.4f"|format(data.page_norm) }})</td>
+              <td><b>{{ "%.4f"|format(data.cosine) }}</b></td></tr>
+        </table>
+      </section>
+
+      <section class="explain-block">
+        <h2>4. Title bonus</h2>
+        <p>A page whose title contains the query words is usually about them, while a long page may mention them only
+          once, for example in its list of references. So {{ "%.1f"|format(data.title_bonus_max) }} × (share of the query terms in the title)
+          is added to the cosine score.</p>
+        <table class="explain-table formula">
+          <tr><td>Query terms in the title &quot;{{ data.page.title }}&quot;</td>
+              <td><b>{% if data.title_terms %}{{ data.title_terms|join(", ") }}{% else %}none{% endif %}</b></td></tr>
+          <tr><td>Title bonus = {{ "%.1f"|format(data.title_bonus_max) }} × {{ "%.2f"|format(data.title_share) }}</td>
+              <td><b>{{ "%.4f"|format(data.title_bonus) }}</b></td></tr>
+          <tr class="total"><td>Final score = cosine + title bonus = {{ "%.4f"|format(data.cosine) }} + {{ "%.4f"|format(data.title_bonus) }}</td>
               <td><b>{{ "%.4f"|format(data.score) }}</b></td></tr>
         </table>
       </section>

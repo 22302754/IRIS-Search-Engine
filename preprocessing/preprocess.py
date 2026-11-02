@@ -1,4 +1,5 @@
 import re
+import unicodedata
 from nltk.stem import PorterStemmer
 
 _STOP_WORDS = frozenset(
@@ -21,12 +22,20 @@ _TOKEN_PATTERN = re.compile(r"[a-z]+")
 _STEMMER = PorterStemmer()
 
 
+def _fold_accents(text):
+    """Turkish and other accented letters -> plain a-z, so "Yırtıcı" is indexed and searched as "yirtici".
+
+    Without this, the [a-z]+ tokenizer would cut such words into pieces ("y", "rt", "c")."""
+    text = text.replace("ı", "i").replace("İ", "I")
+    return "".join(ch for ch in unicodedata.normalize("NFKD", text) if not unicodedata.combining(ch))
+
+
 def preprocess(text):
     """Lowercase, tokenize, remove stop words, and Porter-stem English text."""
     if not text:
         return []
 
-    tokens = _TOKEN_PATTERN.findall(text.lower())
+    tokens = _TOKEN_PATTERN.findall(_fold_accents(text).lower())
     return [
         _STEMMER.stem(token)
         for token in tokens

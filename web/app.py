@@ -20,7 +20,7 @@ app.jinja_env.filters["highlight"] = lambda value, query: highlight(value, query
 PER_PAGE = 10
 SNIPPET_WORDS = 30          # words shown around the first query word
 SNIPPET_BEFORE = 10         # words kept before it
-TEXT_FOR_SNIPPET = 20000    # characters of page text read for the snippet
+TEXT_FOR_SNIPPET = 200000   # characters of page text read for the snippet (query words can be near the end)
 
 
 class SearchBackendUnavailable(RuntimeError):
@@ -96,7 +96,7 @@ def _connection_pool(database_url):
 SITE_LABELS = {
     "books": "Books to Scrape", "quotes": "Quotes to Scrape", "python-docs": "Python docs", "mdn": "MDN Web Docs",
     "ir-book": "IR textbook (Stanford)", "wikipedia": "Wikipedia", "postgresql-docs": "PostgreSQL docs",
-    "scrapy-docs": "Scrapy docs", "flask-docs": "Flask docs",
+    "scrapy-docs": "Scrapy docs", "flask-docs": "Flask docs", "ciu": "CIU website",
 }
 
 
@@ -106,13 +106,14 @@ def _site_param():
 
 
 def _run_search(connection, query, page, site=""):
-    from ranker.explain import keep_matching_pages, matched_terms
+    from ranker.explain import boost_titles, keep_matching_pages, matched_terms
     from ranker.rank import rank
 
     ranked_pages = rank(query, k=None, connection=connection)
     with connection.cursor() as cursor:
         # only pages that contain every query word (and are on the chosen site)
         ranked_pages = keep_matching_pages(cursor, ranked_pages, query, site or None)
+        ranked_pages = boost_titles(cursor, ranked_pages, query)      # query words in the title rank higher
         total = len(ranked_pages)
         total_pages = max(1, math.ceil(total / PER_PAGE))
         page = min(max(page, 1), total_pages)

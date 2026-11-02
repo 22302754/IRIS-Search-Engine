@@ -119,6 +119,22 @@
         "/(_sources|_static|_images|_downloads|genindex|search|py-modindex)(\\.html)?(/|$)",
         "^/en/stable/_modules/"
       ]
+    },
+    {
+      "name": "ciu",
+      "host": "ciu.edu.tr",
+      "max_pages": 900,
+      "max_depth": 4,
+      "allow": [
+        "^/en/?$",
+        "^/en/[A-Za-z0-9_/-]+$"
+      ],
+      "deny": [
+        "^/en/(privacy-policy|cookie-policy|corporate-identity-guide)$",
+        "^/en/(events|news)$",
+        "^/en/image-captcha-refresh/",
+        "/(search|login|logout)(/|$)"
+      ]
     }
   ]
 }

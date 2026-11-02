@@ -8,13 +8,41 @@ rank() scores every page that contains at least one query word. The search page 
   * a query word that is not in the index at all means the collection has nothing on it -> no results;
   * results can be limited to one site.
 
+Title bonus: a page whose TITLE contains the query words is usually about them (a person's own profile page,
+the manual page of a function), while a long page may mention them once in a list of references. So the search
+page adds TITLE_BONUS x (share of the query words found in the title) to the cosine score and sorts again.
+
 explain() repeats the TF-IDF / cosine calculation of rank() for one page, word by word, so the numbers
-can be shown and checked:  score = sum(w_q * w_d) / (|q| * |d|),  w = tf * ln(N / df).
+can be shown and checked:  cosine = sum(w_q * w_d) / (|q| * |d|),  w = tf * ln(N / df),
+score = cosine + title bonus.
 """
 import math
 from collections import Counter
 
 from preprocessing.preprocess import preprocess
+
+
+TITLE_BONUS = 0.1
+
+
+def title_share(terms, title):
+    """Share (0..1) of the distinct query terms that appear in the title, after the same pre-processing."""
+    wanted = set(terms)
+    if not wanted:
+        return 0.0
+    return len(wanted & set(preprocess(title or ""))) / len(wanted)
+
+
+def boost_titles(cursor, ranked, query):
+    """Add the title bonus to each (page_id, cosine) pair and sort again, best first."""
+    if not ranked:
+        return []
+    terms = query_terms(query)
+    cursor.execute("SELECT id, title FROM pages WHERE id = ANY(%s)", ([page_id for page_id, _ in ranked],))
+    titles = dict(cursor.fetchall())
+    boosted = [(page_id, score + TITLE_BONUS * title_share(terms, titles.get(page_id)))
+               for page_id, score in ranked]
+    return sorted(boosted, key=lambda pair: (-pair[1], pair[0]))
 
 
 def query_terms(query):
@@ -96,9 +124,14 @@ def explain(cursor, query, page_id):
 
     dot = sum(r["product"] for r in rows)
     query_norm = math.sqrt(sum(r["query_weight"] ** 2 for r in rows))
-    score = dot / (query_norm * page_norm) if query_norm and page_norm else 0.0
+    cosine = dot / (query_norm * page_norm) if query_norm and page_norm else 0.0
+    title = page[1] or page[2]
+    share = title_share(terms, page[1])
+    title_terms = sorted(set(terms) & set(preprocess(page[1] or "")))
     return {
-        "page": {"id": page[0], "title": page[1] or page[2], "url": page[2], "site": page[3], "words": page[4]},
+        "page": {"id": page[0], "title": title, "url": page[2], "site": page[3], "words": page[4]},
         "n_pages": n_pages, "terms": rows, "dot": dot, "query_norm": query_norm, "page_norm": page_norm,
-        "score": score, "all_terms_present": all(r["page_tf"] > 0 for r in rows) and bool(rows),
+        "cosine": cosine, "title_terms": title_terms, "title_share": share, "title_bonus_max": TITLE_BONUS,
+        "title_bonus": TITLE_BONUS * share, "score": cosine + TITLE_BONUS * share,
+        "all_terms_present": all(r["page_tf"] > 0 for r in rows) and bool(rows),
     }

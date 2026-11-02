@@ -50,3 +50,10 @@ def test_none_and_whitespace_give_empty_list():
 def test_query_and_page_produce_matching_terms():
     page_terms = set(preprocess("The crawler downloads pages and follows their links."))
     assert set(preprocess("crawler page links")) <= page_terms
+
+
+def test_turkish_and_accented_letters_are_folded_to_plain_letters():
+    # without folding, "Yırtıcı" would be cut into "y", "rt", "c"
+    assert preprocess("Tolga Yırtıcı") == ["tolga", "yirtici"]
+    assert preprocess("Tolga YIRTICI") == ["tolga", "yirtici"]
+    assert preprocess("İstanbul çağrı café") == ["istanbul", "cagri", "cafe"]

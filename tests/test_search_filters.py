@@ -77,11 +77,35 @@ def test_explain_gives_the_same_score_as_rank(db):
     scores = dict(rank("web crawler", k=None, connection=db))
     with db.cursor() as cur:
         details = explain(cur, "web crawler", 1)
-        assert details["score"] == pytest.approx(scores[1])
+        assert details["cosine"] == pytest.approx(scores[1])
+        assert details["title_bonus"] == 0 and details["score"] == details["cosine"]   # title "Page 1"
         assert details["score"] == pytest.approx(0.960416, abs=1e-6)       # hand calculation in test_rank.py
         assert {row["term"]: row["page_tf"] for row in details["terms"]} == {"web": 2, "crawler": 1}
         assert details["all_terms_present"]
         assert explain(cur, "web crawler", 999) is None
+
+
+def test_title_bonus_lifts_a_page_about_the_query(db):
+    from ranker.explain import TITLE_BONUS, boost_titles, explain
+
+    with db.cursor() as cur:
+        cur.execute("UPDATE pages SET title = 'Web index basics' WHERE id = 2")
+        boosted = boost_titles(cur, [(1, 0.50), (2, 0.45)], "web")   # cosine scores: page 1 ahead
+        assert boosted == [(2, pytest.approx(0.45 + TITLE_BONUS)), (1, 0.50)]   # "web" in page 2's title
+        details = explain(cur, "web", 2)
+        assert details["title_terms"] == ["web"]
+        assert details["score"] == pytest.approx(details["cosine"] + TITLE_BONUS)
+        assert details["cosine"] == pytest.approx(dict(rank("web", k=None, connection=db))[2])
+
+
+def test_title_share_counts_distinct_query_words():
+    from collections import Counter
+
+    from ranker.explain import title_share
+
+    assert title_share(Counter(["tolga", "yirtici"]), "Assoc. Prof. Dr. Tolga YIRTICI | CIU") == 1.0
+    assert title_share(Counter(["tolga", "kamil"]), "Kamil Yurtkan") == 0.5
+    assert title_share(Counter(), "anything") == 0.0
 
 
 # ------------------------------------------------------------------ web routes (no database needed)

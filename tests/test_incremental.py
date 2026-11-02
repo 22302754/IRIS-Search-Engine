@@ -95,9 +95,20 @@ def test_old_pages_count_towards_the_collection_size(tmp_path):
 
 def test_real_site_config_is_valid():
     rules = load_rules(ROOT / "crawler" / "seeds.txt", ROOT / "crawler" / "sites.json")
-    assert len(rules) == 9
+    assert len(rules) == 9                       # ir-book paused (server refuses connections), ciu added
     assert all(r.accepts(r.start_url) for r in rules)
     assert 3000 <= sum(r.max_pages for r in rules) <= 5000
+
+
+def test_ciu_rules_keep_to_the_public_english_pages():
+    rules = {r.name: r for r in load_rules(ROOT / "crawler" / "seeds.txt", ROOT / "crawler" / "sites.json")}
+    ciu = rules["ciu"]
+    assert ciu.accepts("https://ciu.edu.tr/en/study/academic-calendar")
+    assert ciu.accepts("https://ciu.edu.tr/en/programs/undergraduate/data-science")
+    assert not ciu.accepts("https://ciu.edu.tr/tr")                          # Turkish copy of the same pages
+    assert not ciu.accepts("https://sis.ciu.edu.tr/")                        # student system: never crawled
+    assert not ciu.accepts("https://moodle.ciu.edu.tr/")
+    assert not ciu.accepts("https://ciu.edu.tr/en/privacy-policy")
 
 
 def test_html_with_wrong_content_type_is_still_read(tmp_path):

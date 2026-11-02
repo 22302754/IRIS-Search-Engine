@@ -2,7 +2,7 @@
 
 **Intelligent Information Retrieval System with Web Crawling and Ranking Algorithms** – a small but complete
 search engine built as our ENGI 401/402 capstone project at Cyprus International University, Faculty of Engineering.
-It crawls nine websites, cleans and indexes their text, and ranks results with TF-IDF and cosine similarity.
+It crawls ten websites, cleans and indexes their text, and ranks results with TF-IDF and cosine similarity.
 
 Supervisor: **Asst. Prof. Dr. Tolga Yırtıcı** · Term: 2026/2027 Fall
 
@@ -19,7 +19,7 @@ Supervisor: **Asst. Prof. Dr. Tolga Yırtıcı** · Term: 2026/2027 Fall
 
 ```mermaid
 flowchart LR
-    W[9 websites] -->|Scrapy, robots.txt, 1 req/s| C[crawler]
+    W[10 websites] -->|Scrapy, robots.txt, 1 req/s| C[crawler]
     C --> P[(pages)]
     P --> I[indexer]
     I --> T[(terms · postings · page_norms)]
@@ -40,7 +40,7 @@ ranked by TF-IDF and cosine similarity.
 
 | Module | Owner | Status |
 | --- | --- | --- |
-| Crawler – 9 sites, cleaning, duplicates, incremental re-crawl | Mohammed | ✅ **3,763 pages, 6.46 million words** ([crawl report](docs/crawl-report.md)) |
+| Crawler – 10 sites (CIU added in week 5), cleaning, duplicates, incremental re-crawl | Mohammed | ✅ **3,763 pages, 6.46 million words** ([crawl report](docs/crawl-report.md)) |
 | Shared database (Supabase PostgreSQL, Frankfurt) | Mohammed | ✅ |
 | Operations – backups, data-quality check, smoke test, weekly crawl on GitHub Actions | Mohammed | ✅ ([deployment](docs/deployment.md)) |
 | `preprocess(text)` – tokens, stop words, Porter stemming | Yazen | ✅ |

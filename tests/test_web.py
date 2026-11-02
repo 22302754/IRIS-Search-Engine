@@ -120,3 +120,16 @@ def test_results_show_backend_unavailable_state(monkeypatch):
     response = get_page("/results?q=crawler")
     assert response.status_code == 503
     assert b"Search is unavailable" in response.data
+
+def test_very_long_query_is_answered(search_results):
+    query = " ".join(["crawler"] * 500)                     # about 4,000 characters
+    response = get_page("/search?q=" + query.replace(" ", "+"))
+    assert response.status_code == 200
+    assert response.get_json()["total"] == 25
+    assert get_page("/results?q=" + query.replace(" ", "+")).status_code == 200
+
+
+def test_special_characters_in_the_query_are_escaped(search_results):
+    page = get_page("/results?q=%3Cscript%3Ealert(1)%3C%2Fscript%3E+%22quoted%22+100%25").get_data(as_text=True)
+    assert "<script>alert(1)</script>" not in page
+    assert "&lt;script&gt;" in page

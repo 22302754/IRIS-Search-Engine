@@ -102,6 +102,71 @@ Page 1 wins the first query because it contains the rare word *crawler*, and its
 score. Page 2 shares only the common word *web*, so it scores low. The same values are checked in
 `tests/test_rank.py`, both against an in-memory copy of the tables and against PostgreSQL itself.
 
+## From Ranking to the Search Page
+
+`rank()` scores every page that shares at least one word with the query. The search page applies three further
+rules on top of these scores (`ranker/explain.py`, `ranker/search.py`):
+
+1. **Every query word must be in the page.** A page is shown only if it contains all query terms after
+   pre-processing. A query word that is not in the index at all means the collection has nothing on the topic,
+   so the page answers *No results found* instead of showing pages that match only part of the query.
+2. **Title bonus.** A page whose title contains the query words is usually *about* them, while a long page may
+   mention them once, for example in its list of references. The final score is
+
+$$\mathrm{score}(q,d) = \cos(\vec q, \vec d) + 0.1 \times \frac{|\text{query terms in the title of } d|}{|\text{query terms}|}$$
+
+   The bonus is at most 0.1, so it reorders pages with similar cosine scores but cannot lift a page with a weak
+   text match above a clearly better one. It was added after the query *tolga* ranked a Wikipedia article that
+   cites an author named Tolga in its references above the university's staff pages.
+3. **Optional site filter**, for example only the CIU website or only the Python documentation.
+
+The page *How was this ranked?* (`/explain`) shows every number behind one result: tf, df, idf and both weights
+for each query term, the dot product, both vector lengths, the cosine, the title bonus and the final score. The
+values are the same as those of `rank()`, which `tests/test_search_filters.py` checks.
+
+### Accented and Turkish letters
+
+The tokenizer keeps only the letters a–z. Before week 5 a Turkish name such as *Yırtıcı* was therefore cut into
+the pieces *y*, *rt* and *c*, and could not be found. `preprocess()` now first folds accented letters to plain
+ones (Unicode NFKD decomposition, dropping the combining marks, and the Turkish dotless *ı* to *i*), so
+*Yırtıcı*, *YIRTICI* and *yirtici* all become the term `yirtici`. Because the indexer and the ranker share the
+same function, the index was rebuilt once after this change.
+
+## Speed
+
+The ranking query reads only the postings of the query terms. A covering index on
+`postings(term_id) INCLUDE (page_id, tf)` lets PostgreSQL answer it from the index alone, without reading the
+table. The table below is the database time of the 20 test queries on the full collection (4,697 pages,
+1,458,705 postings), measured inside Supabase on 2 November 2026, second run of each query:
+
+| Query | Pages scored by `rank()` | `rank()` (ms) | Pages shown (all words) | Search page (ms) |
+| --- | ---: | ---: | ---: | ---: |
+| Q01 inverted index | 751 | 2.1 | 81 | 1.6 |
+| Q02 tf idf term weighting | 1,122 | 2.6 | 38 | 1.7 |
+| Q03 cosine similarity vector space model | 1,786 | 3.6 | 11 | 2.3 |
+| Q04 precision and recall | 454 | 1.7 | 77 | 1.4 |
+| Q05 web crawler politeness robots | 2,052 | 3.6 | 5 | 2.1 |
+| Q06 pagerank link analysis | 1,214 | 2.7 | 17 | 1.7 |
+| Q07 stemming and lemmatization | 143 | 1.4 | 13 | 1.1 |
+| Q08 python list comprehension | 1,686 | 3.4 | 62 | 2.2 |
+| Q09 reading and writing files in python | 2,096 | 4.0 | 214 | 2.9 |
+| Q10 handling exceptions try except | 1,513 | 3.1 | 234 | 2.4 |
+| Q11 regular expressions | 913 | 2.4 | 277 | 2.4 |
+| Q12 css flexbox layout | 498 | 1.8 | 6 | 1.2 |
+| Q13 javascript click event listener | 1,254 | 2.8 | 38 | 1.8 |
+| Q14 aria roles accessibility | 1,574 | 3.2 | 71 | 2.1 |
+| Q15 create index b-tree postgresql | 2,558 | 4.4 | 23 | 2.6 |
+| Q16 jsonb operators | 1,205 | 2.6 | 5 | 1.6 |
+| Q17 scrapy item pipeline | 595 | 2.0 | 29 | 1.4 |
+| Q18 flask blueprints | 86 | 1.3 | 21 | 1.1 |
+| Q19 albert einstein quotes | 356 | 1.6 | 8 | 1.2 |
+| Q20 sapiens brief history of humankind | 932 | 2.4 | 3 | 1.5 |
+
+Every query takes under 5 ms in the database (median 2.6 ms for `rank()`), far below the 0.5-second target.
+Each of the 20 queries finds at least three pages that contain all of its words. The time a user waits is
+therefore dominated by the network between the web server and the database, not by the ranking: the search page
+needs two database round trips per query (see the indexing section).
+
 ## Testing
 
 `tests/test_rank.py` contains the worked example above with exact scores and order for both queries, and checks
@@ -110,17 +175,21 @@ empty, punctuation-only, number-only and stop-word-only queries return `[]`. Eac
 version of the `terms`, `postings` and `page_norms` tables built by the indexer's own code. When the variable
 `IRIS_TEST_DATABASE_URL` is set, the same tests also run the real SQL of `rank()` on PostgreSQL, using temporary
 tables that never touch the shared index.
+`tests/test_search_filters.py` checks the search-page rules: only pages with every query word, no results for a
+word that is not in the collection, the site filter, the title bonus, and that the `/explain` page and the fast
+search query give exactly the scores of `rank()`. `tests/test_preprocess.py` checks the folding of Turkish and
+accented letters.
 
 ## Limitations and Possible Improvements
 
 - **Raw term frequency.** A page that repeats a word 50 times gets 50 times its weight for that word. A
   logarithmic term frequency, $1 + \ln \mathrm{tf}$, would damp this (Manning et al., 2008, §6.4.1).
-- **Title not used.** Only the page text is indexed; a match in the page title counts the same as one in the
-  body. Indexing the title, possibly with a higher weight, is a simple improvement.
+- **Title only as a bonus.** The title adds a fixed bonus of up to 0.1 but is not part of the TF-IDF vector;
+  indexing the title as its own weighted field would be a cleaner model.
 - **No phrase or proximity information.** *Inverted index* and *index inverted* give the same scores.
-- **Response time.** The verified API call on 1 November took 3,183 ms (see the indexing section), above the
-  1-second target. Common query words have long postings lists; measuring the 20 test queries will show
-  whether caching $N$ and the IDF values, or limiting very common terms, is needed.
+- **All words required.** The search page hides pages that contain only some of the query words. This is what
+  users expect for short queries, but a long, specific query can then return nothing; a fallback that shows
+  partial matches below a separator would help.
 - **Alternatives.** BM25 (Robertson & Zaragoza, 2009) usually ranks better than plain TF-IDF and could replace
   the weighting without changing the index tables.
 

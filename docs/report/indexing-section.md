@@ -5,69 +5,93 @@
 IRIS stores crawled pages in PostgreSQL and builds an inverted index in the
 `terms`, `postings`, and `page_norms` tables. The indexer uses the shared
 `preprocess(text)` function, so document tokens and query tokens use the same
-lowercasing, stop-word removal, and Porter stemming rules.
+lowercasing, folding of accented and Turkish letters, stop-word removal, and
+Porter stemming rules.
 
 For a collection of `N` pages, the indexer stores a document frequency `df(t)`
 for each term and a term frequency `tf(t,d)` for each page. The ranker uses the
 weight `tf(t,d) * log(N / df(t))` and cosine similarity. `page_norms` stores
 the denominator for each document vector.
 
-The first `python -m indexer.build` run creates the complete index in one
-transaction. Later runs are incremental: they select pages whose
-`COALESCE(updated_at, crawled_at)` is newer than the stored checkpoint, replace
-only those pages' postings, remove references for deleted pages, and then
-refresh document frequencies and vector norms for the collection. The checkpoint
-is advanced only after the transaction succeeds.
+The first `python -m indexer.build` run creates the complete index; later runs are
+incremental: they select pages whose `COALESCE(updated_at, crawled_at)` is newer
+than the stored checkpoint in `index_state`, replace only those pages' postings,
+remove references for deleted pages, and then refresh document frequencies and
+vector norms for the collection. `python -m indexer.build --full` rebuilds
+everything, which is needed when `preprocess()` changes. The checkpoint is
+advanced only after the write transaction succeeds.
 
-## Verified cloud build
+### Building over an unreliable connection
 
-On 1 November 2026, the shared Supabase database was indexed successfully:
+The shared database is in the cloud, so a build depends on a long network
+connection. A full build on 2 November failed when that connection was cut while
+the indexer was still reading pages. The indexer was therefore split into three
+steps:
 
-| Measurement | Result |
-| --- | ---: |
-| Pages indexed | 3,769 |
-| Unique terms | 85,640 |
-| Postings | 1,201,490 |
-| Full-build time | 921.4 seconds (15 min 21 sec) |
+1. A short transaction records the start time and the last checkpoint.
+2. The pages are read in batches of 50 over short connections with TCP
+   keep-alives. If a connection drops, the indexer reconnects and continues from
+   the last page it received (up to four attempts per batch).
+3. One write transaction replaces the index, so searches see either the old or
+   the new index, never a half-built one. The 1.46 million postings are loaded
+   with PostgreSQL `COPY` instead of row-by-row `INSERT` statements, and the
+   tables are vacuumed and analysed afterwards so the planner has fresh
+   statistics.
 
-The JSON endpoint was verified with the query `information retrieval`: it
-returned HTTP 200, 1,567 matching pages, and the first 10 results contained the
-required `id`, `title`, `url`, `snippet`, and `score` fields.
+### Database indexes
+
+| Index | Used for |
+| --- | --- |
+| `terms(term)` (unique) | Finding the query terms |
+| `postings(term_id) INCLUDE (page_id, tf)` | Reading a term's postings from the index alone (index-only scan) |
+| `postings(page_id)` | Replacing the postings of a changed page in incremental builds |
+| `page_norms(page_id)` (primary key) | The cosine denominator of each page |
+
+With the covering index the scoring query for *information retrieval* (911
+matching pages) fell from 431 ms to 40 ms on a cold cache, and the 20 test
+queries now take under 5 ms each in the database (see the ranking section).
+
+## Index statistics
+
+| Measurement | 1 November 2026 | 2 November 2026 |
+| --- | ---: | ---: |
+| Pages indexed | 3,769 | 4,697 |
+| Sites | 9 | 10 (CIU website added) |
+| Unique terms | 85,640 | 102,128 |
+| Postings | 1,201,490 | 1,458,705 |
+| Full-build time | 921.4 s (row inserts) | **[…] s** (`COPY`) |
+
+The number of terms grew faster than the number of pages because the CIU pages
+contain many names and Turkish words that appear nowhere else.
 
 ## Search API
 
-`GET /search?q=<query>&page=<page>` validates that `q` is not empty, delegates
-ranking to `ranker.rank`, retrieves the selected pages, and returns the agreed
-JSON contract: `query`, `total`, `page`, `per_page`, `time_ms`, and `results`.
-Each result contains `id`, `title`, `url`, `snippet`, and `score`.
+`GET /search?q=<query>&page=<page>[&site=<site>]` validates that `q` is not empty
+(HTTP 400 otherwise) and returns the agreed JSON contract: `query`, `total`,
+`page`, `per_page`, `time_ms`, and `results`, where each result has `id`, `title`,
+`url`, `snippet`, and `score`, plus `site` and `matched_terms`. Only pages that
+contain every query word are returned, with the title bonus described in the
+ranking section.
 
-The API reuses PostgreSQL connections between requests. A one-time cold request
-creates the pool connection; the following benchmark was taken after that
-warm-up request. Every technical benchmark query returned HTTP 200 and met the
-under-one-second response target.
+The first version of the route made about nine round trips to the database per
+search (three in `rank()`, then filtering, the title bonus, the page details and
+the matched words) and downloaded the full text of the ten result pages to cut a
+30-word snippet. From Cyprus each round trip to the database in Frankfurt takes
+about 70 ms. The route now uses `ranker/search.py`, which needs **two** round
+trips: one query scores, filters and returns the titles of all matching pages;
+a second query returns only the ten pages shown, with a 1,500-character window of
+text around the first query word and the query words found in each page. The
+scores are identical to those of `rank()`, which the tests check. Database
+connections are kept open in a small pool between searches.
 
-| Query | Matching pages | Response time (ms) |
-| --- | ---: | ---: |
-| information retrieval | 1,567 | 681 |
-| search engine | 989 | 656 |
-| web crawler | 1,581 | 665 |
-| database | 656 | 609 |
-| postgresql | 455 | 569 |
-| python | 566 | 648 |
-| scrapy | 53 | 680 |
-| flask | 67 | 576 |
-| inverted index | 694 | 553 |
-| tf idf | 77 | 553 |
-| machine learning | 969 | 596 |
-| computer science | 1,034 | 597 |
-| data structures | 1,539 | 604 |
-| web development | 2,408 | 694 |
-| network | 496 | 630 |
-| programming | 737 | 593 |
-| algorithm | 420 | 581 |
-| software engineering | 685 | 556 |
-| query | 604 | 552 |
-| ranking | 279 | 582 |
+| Measurement | Value |
+| --- | ---: |
+| Database round trips per search | 9 → 2 |
+| Page text sent per search | full text of 10 pages → at most 15,000 characters |
+| Database time, 20 test queries | 1.1–2.9 ms each |
+| Response time on the laptop, 20 test queries (median) | **[…] ms** |
+| Response time on the public site, 20 test queries (median) | **[…] ms** |
 
-The team-owned `docs/test-queries.md` file is still absent, so these figures
-measure API performance only; they are not the team's relevance-evaluation set.
+The last two rows are measured with
+`python3 -m infra.smoke_test --base-url <url> --out docs/smoke-test.md`, which
+sends the 20 queries of `docs/test-queries.json` and records the time of each.

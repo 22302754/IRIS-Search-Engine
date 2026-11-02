@@ -18,7 +18,7 @@ suite, so the whole suite runs in a few seconds on any laptop.
 
 ## Automated Test Suite
 
-The suite contains **118 tests** in eleven files:
+The suite contains **122 tests** in twelve files:
 
 | File | Tests | Module | Main cases |
 | --- | ---: | --- | --- |
@@ -30,8 +30,9 @@ The suite contains **118 tests** in eleven files:
 | `test_preprocess.py` | 10 | Pre-processing | empty text, mixed case, punctuation, numbers, stop words, stemming, URLs, short words |
 | `test_search_modules.py` | 8 | Indexer | term and document frequencies, vector norms, empty collection |
 | `test_rank.py` | 29 | Ranker | hand-calculated TF-IDF and cosine scores for 3 documents and 2 queries, result order, unknown words, empty and stop-word-only queries — run in Python and again on PostgreSQL |
-| `test_web.py` | 12 | Web / API | `/search` JSON fields, HTTP 400 for an empty query, no results, backend down (HTTP 503), paging (10 per page) |
+| `test_web.py` | 14 | Web / API | `/search` JSON fields, HTTP 400 for an empty query, no results, backend down (HTTP 503), paging (10 per page), a 500-word query, special characters escaped |
 | `test_snippet.py` | 6 | Web | snippet around the first query word, word forms through stemming, bold query words, HTML escaping |
+| `test_end_to_end.py` | 2 | All modules | pages in PostgreSQL → indexer (full and incremental) → `/search`, `/results` and `/explain` return the expected first result |
 | `test_search_filters.py` | 11 | Ranker / Web | only pages with every query word, unknown word gives no results, site filter, `/explain` score equals `rank()` |
 
 The ranking tests are the most important: they compare the scores of `rank()` with values calculated by hand,
@@ -73,7 +74,7 @@ were corrected or replaced before any judging, as recorded in `docs/test-queries
 | --- | --- |
 | Search page in Chrome, Safari and Firefox on a laptop screen (NFR-8) | **[…]** |
 | Keyboard only: type a query, press Enter, move through results with Tab | **[…]** |
-| Very long query (500 characters) and special characters (`<`, `"`, `%`) | **[…]** |
+| Very long query (500 words) and special characters (`<`, `"`, `%`) | Automated in `test_web.py`: answered, and the characters are escaped; **[…]** in the browsers |
 
 ## Limitations
 

@@ -40,16 +40,16 @@ ranked by TF-IDF and cosine similarity.
 
 | Module | Owner | Status |
 | --- | --- | --- |
-| Crawler – 10 sites (CIU added in week 5), cleaning, duplicates, incremental re-crawl | Mohammed | ✅ **3,763 pages, 6.46 million words** ([crawl report](docs/crawl-report.md)) |
+| Crawler – 10 sites (CIU added in week 5), cleaning, duplicates, incremental re-crawl | Mohammed | ✅ **4,697 pages, 7.66 million words** ([crawl report](docs/crawl-report.md)) |
 | Shared database (Supabase PostgreSQL, Frankfurt) | Mohammed | ✅ |
 | Operations – backups, data-quality check, smoke test, weekly crawl on GitHub Actions | Mohammed | ✅ ([deployment](docs/deployment.md)) |
 | `preprocess(text)` – tokens, stop words, Porter stemming | Yazen | ✅ |
 | `rank(query, k)` – TF-IDF + cosine, hand-calculated tests, 20 test queries | Yazen | ✅ ([test queries](docs/test-queries.md)) |
-| Indexer `python3 -m indexer.build` – full and incremental | Hani | ✅ 85,669 terms, 1.2 million postings ([schema](docs/schema.sql)) |
+| Indexer `python3 -m indexer.build` – full and incremental | Hani | ✅ 102,128 terms, 1.46 million postings ([schema](docs/schema.sql)) |
 | `GET /search` JSON API – all 20 benchmark queries under 1 s | Hani | ✅ |
 | Search page and results page – paging, snippets with the query words in bold | Elpi | ✅ |
 | Site filter, all-words matching, ranking details per result and `/explain` page | Team | ✅ |
-| Tests on every pull request (GitHub Actions) | Elpi | ✅ 118 tests ([testing](docs/report/testing-section.md)) |
+| Tests on every pull request (GitHub Actions) | Elpi | ✅ 122 tests ([testing](docs/report/testing-section.md)) |
 | Public website (Render) | Mohammed | 🔄 Next step |
 
 ## Roadmap
@@ -75,7 +75,7 @@ IRIS-Search-Engine/
 ├── ranker/             rank(query, k): TF-IDF + cosine similarity; check of the 20 test queries
 ├── web/                Flask app: search page, results page, /search JSON API
 ├── infra/              backup, restore, data-quality check, smoke test
-├── tests/              118 pytest tests for every module
+├── tests/              122 pytest tests for every module
 ├── docs/               requirements, contracts, schema, test queries, meeting notes
 │   ├── report/         draft sections of the final report
 │   └── weekly/         weekly submission notes
@@ -109,6 +109,7 @@ DATABASE_URL=postgresql://...
 | `python3 run_pipeline.py` | robots.txt check → crawl → crawl report → index (`--only ir-book` for one site) |
 | `python3 -m indexer.build` | Update the index for new or changed pages (`--full` rebuilds everything) |
 | `python3 -m ranker.check_queries` | Check that each of the 20 test queries has a relevant page |
+| `python3 -m ranker.judging_sheet` | Top 10 of each test query → `docs/judging-sheet.csv` for Precision@10 (`--score` to compute it) |
 | `python3 -m infra.backup_db` | Back up the database to `backups/<date>/` |
 | `python3 -m infra.restore_db backups/<date>` | Restore a backup (safe by default) |
 | `python3 -m infra.check_quality` | Data-quality report → `docs/data-quality.md` |
@@ -131,7 +132,8 @@ DATABASE_URL=postgresql://...
 | | [search-index.md](docs/search-index.md) | Building and updating the search index |
 | Operations | [deployment.md](docs/deployment.md) | Hosting, weekly crawl, backups, checks |
 | Evaluation | [test-queries.md](docs/test-queries.md) | The 20 test queries and how relevance is judged |
-| Report | [report/](docs/report/) | Crawler, infrastructure, indexing, ranking and testing sections |
+| Report | [report/](docs/report/) | Crawler, infrastructure, indexing, ranking, testing and interface sections |
+| | [demo-script.md](docs/demo-script.md) | The 2-minute demo video, step by step |
 | Weekly | [weekly/](docs/weekly/) | Weekly submission notes |
 
 ## How we work

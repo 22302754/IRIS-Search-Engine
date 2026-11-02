@@ -18,7 +18,7 @@ suite, so the whole suite runs in a few seconds on any laptop.
 
 ## Automated Test Suite
 
-The suite contains **104 tests** in ten files:
+The suite contains **111 tests** in eleven files:
 
 | File | Tests | Module | Main cases |
 | --- | ---: | --- | --- |
@@ -32,6 +32,7 @@ The suite contains **104 tests** in ten files:
 | `test_rank.py` | 29 | Ranker | hand-calculated TF-IDF and cosine scores for 3 documents and 2 queries, result order, unknown words, empty and stop-word-only queries — run in Python and again on PostgreSQL |
 | `test_web.py` | 12 | Web / API | `/search` JSON fields, HTTP 400 for an empty query, no results, backend down (HTTP 503), paging (10 per page) |
 | `test_snippet.py` | 6 | Web | snippet around the first query word, word forms through stemming, bold query words, HTML escaping |
+| `test_search_filters.py` | 7 | Ranker / Web | only pages with every query word, unknown word gives no results, site filter, `/explain` score equals `rank()` |
 
 The ranking tests are the most important: they compare the scores of `rank()` with values calculated by hand,
 so an error in the formula, in the use of `page_norms` or in the SQL is found at once. The same cases run twice —

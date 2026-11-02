@@ -93,39 +93,59 @@ def _connection_pool(database_url):
     return _POOL
 
 
-def _run_search(connection, query, page):
+SITE_LABELS = {
+    "books": "Books to Scrape", "quotes": "Quotes to Scrape", "python-docs": "Python docs", "mdn": "MDN Web Docs",
+    "ir-book": "IR textbook (Stanford)", "wikipedia": "Wikipedia", "postgresql-docs": "PostgreSQL docs",
+    "scrapy-docs": "Scrapy docs", "flask-docs": "Flask docs",
+}
+
+
+def _site_param():
+    site = request.args.get("site", "").strip()
+    return site if site in SITE_LABELS else ""
+
+
+def _run_search(connection, query, page, site=""):
+    from ranker.explain import keep_matching_pages, matched_terms
     from ranker.rank import rank
 
     ranked_pages = rank(query, k=None, connection=connection)
-    total = len(ranked_pages)
-    total_pages = max(1, math.ceil(total / PER_PAGE))
-    page = min(max(page, 1), total_pages)
-    start = (page - 1) * PER_PAGE
-    page_results = ranked_pages[start:start + PER_PAGE]
-    page_ids = [page_id for page_id, _ in page_results]
-
     with connection.cursor() as cursor:
+        # only pages that contain every query word (and are on the chosen site)
+        ranked_pages = keep_matching_pages(cursor, ranked_pages, query, site or None)
+        total = len(ranked_pages)
+        total_pages = max(1, math.ceil(total / PER_PAGE))
+        page = min(max(page, 1), total_pages)
+        start = (page - 1) * PER_PAGE
+        page_results = ranked_pages[start:start + PER_PAGE]
+        page_ids = [page_id for page_id, _ in page_results]
+
         cursor.execute(
             """
-            SELECT id, title, url, description, LEFT(text, %s)
+            SELECT id, title, url, description, LEFT(text, %s), site
             FROM pages
             WHERE id = ANY(%s)
             """,
             (TEXT_FOR_SNIPPET, page_ids),
         )
+        rows = cursor.fetchall()
+        terms = matched_terms(cursor, query, page_ids)
         pages = {
             row[0]: {
                 "id": row[0],
                 "title": row[1] or row[2],
                 "url": row[2],
                 "snippet": _snippet(row[3], row[4], query),
+                "site": row[5],
+                "matched_terms": terms.get(row[0], {}),
             }
-            for row in cursor.fetchall()
+            for row in rows
         }
     return total, page, total_pages, page_results, pages
 
 
-def _search_database(query, page=1):
+def _with_connection(work):
+    """Run work(connection) on a pooled connection; one retry if the server closed an idle connection."""
     database_url = os.environ.get("DATABASE_URL")
     if not database_url:
         raise SearchBackendUnavailable("Search database is not configured")
@@ -136,7 +156,6 @@ def _search_database(query, page=1):
     except ImportError as exc:
         raise SearchBackendUnavailable("Search backend is not installed") from exc
 
-    # Two attempts: a pooled connection may have been closed by the server while idle.
     for attempt in (1, 2):
         connection = None
         broken = False
@@ -144,8 +163,7 @@ def _search_database(query, page=1):
             pool = _connection_pool(database_url)
             connection = pool.getconn()
             connection.autocommit = True
-            total, page, total_pages, page_results, pages = _run_search(connection, query, page)
-            break
+            return work(connection)
         except psycopg2.Error as exc:
             broken = True
             if attempt == 2:
@@ -154,8 +172,13 @@ def _search_database(query, page=1):
             if connection is not None:
                 _POOL.putconn(connection, close=broken or bool(connection.closed))
 
+
+def _search_database(query, page=1, site=""):
+    total, page, total_pages, page_results, pages = _with_connection(
+        lambda connection: _run_search(connection, query, page, site))
     return {
         "query": query,
+        "site": site or None,
         "total": total,
         "page": page,
         "per_page": PER_PAGE,
@@ -169,15 +192,17 @@ def _search_database(query, page=1):
     }
 
 
-def execute_search(query, page=1):
+def execute_search(query, page=1, site=""):
     started = perf_counter()
     provider = app.config.get("SEARCH_PROVIDER")
     if provider is None:
-        payload = _search_database(query, page)
+        payload = _search_database(query, page, site)
         payload["time_ms"] = round((perf_counter() - started) * 1000)
         return payload
 
     ranked_results = provider(query)
+    if site:
+        ranked_results = [r for r in ranked_results if r.get("site") == site]
     total = len(ranked_results)
     total_pages = max(1, math.ceil(total / PER_PAGE))
     page = min(max(page, 1), total_pages)
@@ -185,6 +210,7 @@ def execute_search(query, page=1):
 
     return {
         "query": query,
+        "site": site or None,
         "total": total,
         "page": page,
         "per_page": PER_PAGE,
@@ -196,18 +222,19 @@ def execute_search(query, page=1):
 
 @app.route("/")
 def home():
-    return render_template("search.html")
+    return render_template("search.html", sites=SITE_LABELS, site="")
 
 
 @app.route("/results")
 def results():
     query = request.args.get("q", "").strip()
     page = request.args.get("page", 1, type=int) or 1
+    site = _site_param()
     search_error = False
 
     if query:
         try:
-            payload = execute_search(query, page)
+            payload = execute_search(query, page, site)
         except SearchBackendUnavailable:
             payload = {
                 "query": query,
@@ -228,7 +255,9 @@ def results():
             "total_pages": 1,
         }
 
-    response = render_template("results.html", **payload, search_error=search_error)
+    payload.setdefault("site", site or None)
+    response = render_template("results.html", **payload, search_error=search_error,
+                               sites=SITE_LABELS, site_labels=SITE_LABELS)
     return response, 503 if search_error else 200
 
 
@@ -240,12 +269,34 @@ def search_api():
 
     page = request.args.get("page", 1, type=int) or 1
     try:
-        payload = execute_search(query, page)
+        payload = execute_search(query, page, _site_param())
     except SearchBackendUnavailable:
         return jsonify({"error": "search backend unavailable"}), 503
 
     payload.pop("total_pages")
     return jsonify(payload)
+
+
+@app.route("/explain")
+def explain_page():
+    """Every number behind one result's score: TF, DF, IDF, weights and the cosine formula."""
+    query = request.args.get("q", "").strip()
+    page_id = request.args.get("id", type=int)
+    if not query or page_id is None:
+        return render_template("explain.html", query=query, data=None, error="missing"), 400
+    try:
+        from ranker.explain import explain
+
+        def work(connection):
+            with connection.cursor() as cursor:
+                return explain(cursor, query, page_id)
+
+        data = _with_connection(work)
+    except SearchBackendUnavailable:
+        return render_template("explain.html", query=query, data=None, error="offline"), 503
+    if data is None:
+        return render_template("explain.html", query=query, data=None, error="notfound"), 404
+    return render_template("explain.html", query=query, data=data, error=None, site_labels=SITE_LABELS)
 
 
 if __name__ == "__main__":

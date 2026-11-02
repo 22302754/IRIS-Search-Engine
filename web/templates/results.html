@@ -12,7 +12,14 @@
       <label class="visually-hidden" for="search-query">Search terms</label>
       <div class="search-control compact">
         <span class="search-icon" aria-hidden="true"></span>
-        <input id="search-query" type="text" name="q" value="{{ query }}" placeholder="Search the index">
+        <input id="search-query" type="search" name="q" value="{{ query }}" placeholder="Search the index" required>
+        <label class="visually-hidden" for="search-site">Site</label>
+        <select id="search-site" name="site" class="site-select">
+          <option value="">All sites</option>
+          {% for key, label in sites.items() %}
+          <option value="{{ key }}"{% if key == site %} selected{% endif %}>{{ label }}</option>
+          {% endfor %}
+        </select>
         <button type="submit">Search <span aria-hidden="true">&rarr;</span></button>
       </div>
     </form>
@@ -30,6 +37,7 @@
       <div>
         <p class="eyebrow">INDEX / SEARCH RESULTS</p>
         <h1>Results for <span class="query-text">&quot;{{ query }}&quot;</span></h1>
+        {% if site %}<p class="site-filter">Only in <b>{{ site_labels[site] }}</b> · <a href="{{ url_for('results', q=query) }}">search all sites</a></p>{% endif %}
       </div>
       <p class="result-count">
         {% if search_error %}
@@ -51,7 +59,8 @@
           {% else %}
             <p class="eyebrow">NO MATCHES</p>
             <h2>No results found</h2>
-            <p>Try different words or check your spelling.</p>
+            <p>No page {% if site %}on {{ site_labels[site] }} {% endif %}contains all the words of
+               &quot;{{ query }}&quot;. IRIS searches only the pages it has crawled. Try fewer or different words.</p>
           {% endif %}
         </div>
       </div>
@@ -65,8 +74,15 @@
             <p class="result-url">{{ r.url }}</p>
             <p class="result-snippet">{{ r.snippet|highlight(query) }}</p>
             <div class="result-meta">
-              <span class="result-score">Relevance <b>{{ "%.4f"|format(r.score) }}</b></span>
-              <span class="result-source">IRIS INDEX</span>
+              <span class="result-rank">Rank <b>{{ loop.index + ((page - 1) * 10) }}</b></span>
+              <span class="result-score">Score <b>{{ "%.4f"|format(r.score) }}</b></span>
+              {% if r.site %}<span class="result-site">{{ site_labels.get(r.site, r.site) }}</span>{% endif %}
+              {% if r.matched_terms %}
+              <span class="result-terms">
+                {% for term, tf in r.matched_terms|dictsort %}<span class="term-chip">{{ term }} <i>×{{ tf }}</i></span>{% endfor %}
+              </span>
+              {% endif %}
+              {% if r.id %}<a class="result-explain" href="{{ url_for('explain_page', q=query, id=r.id) }}">How was this ranked?</a>{% endif %}
             </div>
           </div>
           <span class="result-arrow" aria-hidden="true">&nearr;</span>
@@ -76,7 +92,7 @@
 
       <nav class="paging" aria-label="Result pages">
         {% if page > 1 %}
-          <a class="page-link" href="{{ url_for('results', q=query, page=page-1) }}"><span aria-hidden="true">&larr;</span> Previous</a>
+          <a class="page-link" href="{{ url_for('results', q=query, page=page-1, site=site or None) }}"><span aria-hidden="true">&larr;</span> Previous</a>
         {% else %}
           <span class="page-link disabled"><span aria-hidden="true">&larr;</span> Previous</span>
         {% endif %}
@@ -84,7 +100,7 @@
         <span class="page-current">Page {{ page }} of {{ total_pages }}</span>
 
         {% if page < total_pages %}
-          <a class="page-link" href="{{ url_for('results', q=query, page=page+1) }}">Next <span aria-hidden="true">&rarr;</span></a>
+          <a class="page-link" href="{{ url_for('results', q=query, page=page+1, site=site or None) }}">Next <span aria-hidden="true">&rarr;</span></a>
         {% else %}
           <span class="page-link disabled">Next <span aria-hidden="true">&rarr;</span></span>
         {% endif %}
@@ -96,5 +112,17 @@
     <span>IRIS / SEARCH INDEX</span>
     <span>{{ total }} RECORDS</span>
   </footer>
+  <script>
+    // Enter in the search box always starts the search, whatever has the focus inside the form.
+    document.querySelectorAll("form.search-form").forEach(function (form) {
+      form.addEventListener("keydown", function (event) {
+        if (event.key === "Enter" && !event.isComposing && event.target.tagName !== "BUTTON") {
+          event.preventDefault();
+          var box = form.querySelector("input[name=q]");
+          if (box && box.value.trim()) { form.submit(); }
+        }
+      });
+    });
+  </script>
 </body>
 </html>

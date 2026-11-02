@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>IRIS · How this page was ranked</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body class="results-view">
+  <header class="site-header results-header">
+    <a class="back-link" href="{{ url_for('results', q=query) }}">&larr; Back to the results for &quot;{{ query }}&quot;</a>
+    <a class="brand-lockup" href="{{ url_for('home') }}" aria-label="IRIS Search Engine home">
+      <img class="brand-symbol" src="{{ url_for('static', filename='iris-logo.svg') }}" alt="">
+      <span class="brand-copy">
+        <span class="brand-name">IRIS</span>
+        <span class="brand-descriptor">Search Engine</span>
+      </span>
+    </a>
+  </header>
+
+  <main class="results-page explain-page">
+    {% if error %}
+      <section class="results-intro">
+        <div>
+          <p class="eyebrow">RANKING DETAILS</p>
+          <h1>{% if error == "offline" %}Search is unavailable{% elif error == "notfound" %}Page not found{% else %}Nothing to explain{% endif %}</h1>
+        </div>
+      </section>
+    {% else %}
+      <section class="results-intro">
+        <div>
+          <p class="eyebrow">RANKING DETAILS · TF-IDF + COSINE SIMILARITY</p>
+          <h1>Why <span class="query-text">&quot;{{ data.page.title }}&quot;</span> scored {{ "%.4f"|format(data.score) }}</h1>
+          <p class="result-url"><a href="{{ data.page.url }}">{{ data.page.url }}</a> ·
+            {{ site_labels.get(data.page.site, data.page.site) }} · {{ "{:,}".format(data.page.words or 0) }} words</p>
+        </div>
+      </section>
+
+      <section class="explain-block">
+        <h2>1. The query after pre-processing</h2>
+        <p>&quot;{{ query }}&quot; becomes the terms
+          {% for row in data.terms %}<span class="term-chip">{{ row.term }}</span>{% endfor %}
+          (lower case, stop words removed, Porter stemming), exactly as the pages were indexed.</p>
+        {% if not data.all_terms_present %}
+          <p class="explain-warning">This page does not contain every query term, so the search page does not show it.</p>
+        {% endif %}
+      </section>
+
+      <section class="explain-block">
+        <h2>2. Weight of each term</h2>
+        <p>The collection has <b>N = {{ "{:,}".format(data.n_pages) }}</b> pages. A term in few pages is more useful:
+          <code>idf = ln(N / df)</code>. Its weight is <code>w = tf × idf</code>, in the query and in the page.</p>
+        <div class="table-wrap">
+          <table class="explain-table">
+            <thead>
+              <tr><th>Term</th><th>df (pages with it)</th><th>idf</th><th>tf in query</th><th>w in query</th>
+                  <th>tf in page</th><th>w in page</th><th>w query × w page</th></tr>
+            </thead>
+            <tbody>
+              {% for row in data.terms %}
+              <tr{% if not row.page_tf %} class="missing"{% endif %}>
+                <td><b>{{ row.term }}</b>{% if not row.in_index %} (not in index){% endif %}</td>
+                <td>{{ "{:,}".format(row.df) }}</td>
+                <td>{{ "%.4f"|format(row.idf) }}</td>
+                <td>{{ row.query_tf }}</td>
+                <td>{{ "%.4f"|format(row.query_weight) }}</td>
+                <td>{{ row.page_tf }}</td>
+                <td>{{ "%.4f"|format(row.page_weight) }}</td>
+                <td>{{ "%.4f"|format(row.product) }}</td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="explain-block">
+        <h2>3. Cosine similarity</h2>
+        <p>The score compares the direction of the query vector and the page vector, so a long page does not win
+          just because it repeats words.</p>
+        <table class="explain-table formula">
+          <tr><td>Dot product (sum of the last column)</td><td><b>{{ "%.4f"|format(data.dot) }}</b></td></tr>
+          <tr><td>|q| = length of the query vector</td><td><b>{{ "%.4f"|format(data.query_norm) }}</b></td></tr>
+          <tr><td>|d| = length of the page vector (all its terms, stored in <code>page_norms</code>)</td><td><b>{{ "%.4f"|format(data.page_norm) }}</b></td></tr>
+          <tr class="total"><td>score = dot / (|q| × |d|) = {{ "%.4f"|format(data.dot) }} / ({{ "%.4f"|format(data.query_norm) }} × {{ "%.4f"|format(data.page_norm) }})</td>
+              <td><b>{{ "%.4f"|format(data.score) }}</b></td></tr>
+        </table>
+      </section>
+    {% endif %}
+  </main>
+
+  <footer class="site-footer results-footer">
+    <span>IRIS / RANKING DETAILS</span>
+    <span>TF-IDF · COSINE</span>
+  </footer>
+</body>
+</html>

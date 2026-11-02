@@ -109,3 +109,14 @@ rank("inverted index compression", k=10)
 ```
 
 No results → `"total": 0, "results": []`. Missing or empty `q` → HTTP 400 with `{"error": "empty query"}`.
+
+Additions in week 5 (the fields above are unchanged):
+
+- Optional `site=<name>` (a `pages.site` value) limits the results to one site; an unknown name is ignored.
+  The answer then also has `"site": "<name>"`.
+- Only pages that contain **every** query word (after `preprocess()`) are returned. A query word that is not
+  in the index means the collection has nothing on it, so the answer is `"total": 0`.
+  `rank()` itself is unchanged; the filter is `ranker/explain.py → keep_matching_pages()`.
+- Each result also has `"site"` and `"matched_terms"` (`{"invert": 2, "index": 2}`: the query terms in the page
+  and how often each occurs).
+- `GET /explain?q=...&id=<page id>` shows every number behind one result's score (HTML page).

@@ -112,7 +112,9 @@ def _ensure_schema(cursor):
         )
         """
     )
-    cursor.execute("CREATE INDEX IF NOT EXISTS postings_term_id_idx ON postings (term_id)")
+    # Covering index: a query word's postings (page_id, tf) are read from the index alone, never from the table
+    cursor.execute("CREATE INDEX IF NOT EXISTS postings_term_covering_idx ON postings (term_id) INCLUDE (page_id, tf)")
+    cursor.execute("DROP INDEX IF EXISTS postings_term_id_idx")
     cursor.execute("CREATE INDEX IF NOT EXISTS postings_page_id_idx ON postings (page_id)")
 
 
@@ -381,6 +383,12 @@ def build_index(database_url=None, *, force_full=False):
                 result.update({"mode": "incremental", "changed_pages": len(documents)})
 
             _record_build(cursor, build_started_at)
+
+    # Fresh statistics and visibility map, so searches use fast index-only scans straight away
+    with closing(_connect(database_url)) as connection:
+        connection.autocommit = True
+        with connection.cursor() as cursor:
+            cursor.execute("VACUUM (ANALYZE) postings, terms, page_norms")
     result["seconds"] = round(time.time() - started, 1)
     return result
 

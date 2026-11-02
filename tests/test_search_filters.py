@@ -25,13 +25,13 @@ def db():
     term_frequencies, document_frequencies, norms = _prepare_index([(i, text) for i, _, text in DOCS])
     with conn.cursor() as cur:   # TEMP tables hide any real tables and disappear with the connection
         cur.execute("CREATE TEMP TABLE pages (id INTEGER PRIMARY KEY, url TEXT, title TEXT, site TEXT, "
-                    "word_count INTEGER, text TEXT)")
+                    "word_count INTEGER, text TEXT, description TEXT)")
         cur.execute("CREATE TEMP TABLE terms (id SERIAL PRIMARY KEY, term TEXT UNIQUE, doc_freq INTEGER)")
         cur.execute("CREATE TEMP TABLE postings (term_id INTEGER, page_id INTEGER, tf INTEGER, "
                     "PRIMARY KEY (term_id, page_id))")
         cur.execute("CREATE TEMP TABLE page_norms (page_id INTEGER PRIMARY KEY, norm DOUBLE PRECISION)")
         for i, site, text in DOCS:
-            cur.execute("INSERT INTO pages VALUES (%s, %s, %s, %s, %s, %s)",
+            cur.execute("INSERT INTO pages VALUES (%s, %s, %s, %s, %s, %s, '')",
                         (i, f"https://site.test/{i}", f"Page {i}", site, len(text.split()), text))
         for term, df in sorted(document_frequencies.items()):
             cur.execute("INSERT INTO terms (term, doc_freq) VALUES (%s, %s) RETURNING id", (term, df))
@@ -132,3 +132,33 @@ def test_results_page_shows_site_menu_and_details(monkeypatch):
 
 def test_explain_needs_a_query_and_a_page():
     assert app.test_client().get("/explain?q=web").status_code == 400
+
+
+def test_search_page_matches_rank_and_the_filters(db):
+    from ranker.explain import TITLE_BONUS, boost_titles, keep_matching_pages
+    from ranker.search import search_page
+
+    with db.cursor() as cur:
+        cur.execute("UPDATE pages SET title = 'Web index basics' WHERE id = 2")
+        expected = boost_titles(cur, keep_matching_pages(cur, rank("web", k=None, connection=db), "web"), "web")
+    total, results = search_page(db, "web", per_page=10)
+    assert total == 2
+    assert [(r["id"], r["score"]) for r in results] == [(p, pytest.approx(s)) for p, s in expected]
+    cosine = dict(rank("web", k=None, connection=db))
+    assert results[0]["cosine"] == pytest.approx(cosine[2]) and results[0]["score"] == pytest.approx(cosine[2] + TITLE_BONUS)
+    assert results[0]["matched_terms"] == {"web": 1} and results[0]["site"] == "ir-book"
+
+    assert search_page(db, "web index", per_page=10)[0] == 1          # only page 2 has both words
+    assert search_page(db, "web zebra", per_page=10) == (0, [])        # word not in the collection
+    assert search_page(db, "index", site="wikipedia") == (0, [])
+    assert search_page(db, "index", per_page=1, page=2)[1][0]["id"] in (2, 3)   # paging
+
+
+def test_search_page_snippet_window_starts_near_the_query_word(db):
+    from ranker.search import search_page
+
+    with db.cursor() as cur:
+        cur.execute("UPDATE pages SET text = %s WHERE id = 3", ("filler " * 300 + "index rank rank",))
+    _, results = search_page(db, "rank", per_page=10)
+    assert results[0]["part_is_cut"] and "rank" in results[0]["text_part"]
+    assert len(results[0]["text_part"]) <= 1500

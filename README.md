@@ -49,7 +49,7 @@ ranked by TF-IDF and cosine similarity.
 | `GET /search` JSON API – all 20 benchmark queries under 1 s | Hani | ✅ |
 | Search page and results page – paging, snippets with the query words in bold | Elpi | ✅ |
 | Site filter, all-words matching, ranking details per result and `/explain` page | Team | ✅ |
-| Tests on every pull request (GitHub Actions) | Elpi | ✅ 111 tests ([testing](docs/report/testing-section.md)) |
+| Tests on every pull request (GitHub Actions) | Elpi | ✅ 118 tests ([testing](docs/report/testing-section.md)) |
 | Public website (Render) | Mohammed | 🔄 Next step |
 
 ## Roadmap
@@ -75,7 +75,7 @@ IRIS-Search-Engine/
 ├── ranker/             rank(query, k): TF-IDF + cosine similarity; check of the 20 test queries
 ├── web/                Flask app: search page, results page, /search JSON API
 ├── infra/              backup, restore, data-quality check, smoke test
-├── tests/              111 pytest tests for every module
+├── tests/              118 pytest tests for every module
 ├── docs/               requirements, contracts, schema, test queries, meeting notes
 │   ├── report/         draft sections of the final report
 │   └── weekly/         weekly submission notes

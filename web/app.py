@@ -20,7 +20,6 @@ app.jinja_env.filters["highlight"] = lambda value, query: highlight(value, query
 PER_PAGE = 10
 SNIPPET_WORDS = 30          # words shown around the first query word
 SNIPPET_BEFORE = 10         # words kept before it
-TEXT_FOR_SNIPPET = 200000   # characters of page text read for the snippet (query words can be near the end)
 
 
 class SearchBackendUnavailable(RuntimeError):
@@ -106,42 +105,27 @@ def _site_param():
 
 
 def _run_search(connection, query, page, site=""):
-    from ranker.explain import boost_titles, keep_matching_pages, matched_terms
-    from ranker.rank import rank
+    """One page of results in two database round trips (ranker/search.py)."""
+    from ranker.search import search_page
 
-    ranked_pages = rank(query, k=None, connection=connection)
-    with connection.cursor() as cursor:
-        # only pages that contain every query word (and are on the chosen site)
-        ranked_pages = keep_matching_pages(cursor, ranked_pages, query, site or None)
-        ranked_pages = boost_titles(cursor, ranked_pages, query)      # query words in the title rank higher
-        total = len(ranked_pages)
-        total_pages = max(1, math.ceil(total / PER_PAGE))
-        page = min(max(page, 1), total_pages)
-        start = (page - 1) * PER_PAGE
-        page_results = ranked_pages[start:start + PER_PAGE]
-        page_ids = [page_id for page_id, _ in page_results]
+    page = max(page, 1)
+    total, found = search_page(connection, query, page, PER_PAGE, site or None)
+    total_pages = max(1, math.ceil(total / PER_PAGE))
+    if page > total_pages:                        # asked for a page past the end: show the last one
+        page = total_pages
+        total, found = search_page(connection, query, page, PER_PAGE, site or None)
 
-        cursor.execute(
-            """
-            SELECT id, title, url, description, LEFT(text, %s), site
-            FROM pages
-            WHERE id = ANY(%s)
-            """,
-            (TEXT_FOR_SNIPPET, page_ids),
-        )
-        rows = cursor.fetchall()
-        terms = matched_terms(cursor, query, page_ids)
-        pages = {
-            row[0]: {
-                "id": row[0],
-                "title": row[1] or row[2],
-                "url": row[2],
-                "snippet": _snippet(row[3], row[4], query),
-                "site": row[5],
-                "matched_terms": terms.get(row[0], {}),
-            }
-            for row in rows
-        }
+    page_results, pages = [], {}
+    for r in found:
+        text = r["text_part"]
+        if r["part_is_cut"]:                      # the part starts inside the page: drop the cut first word
+            text = text.split(" ", 1)[1] if " " in text else text
+        snippet = _snippet(r["description"], text, query)
+        if r["part_is_cut"] and not snippet.startswith("… ") and text and snippet.startswith(text.split()[0]):
+            snippet = "… " + snippet
+        page_results.append((r["id"], r["score"]))
+        pages[r["id"]] = {"id": r["id"], "title": r["title"], "url": r["url"], "snippet": snippet,
+                          "site": r["site"], "matched_terms": r["matched_terms"]}
     return total, page, total_pages, page_results, pages
 
 

@@ -18,21 +18,21 @@ suite, so the whole suite runs in a few seconds on any laptop.
 
 ## Automated Test Suite
 
-The suite contains **111 tests** in eleven files:
+The suite contains **118 tests** in eleven files:
 
 | File | Tests | Module | Main cases |
 | --- | ---: | --- | --- |
 | `test_cleaner.py` | 13 | Crawler | menus, headers, footers and scripts removed; main text kept; URL canonical form; thin pages rejected |
 | `test_dedupe.py` | 6 | Crawler | same URL or same text saved only once |
-| `test_incremental.py` | 13 | Crawler | new / changed / unchanged pages on a re-crawl, `304 Not Modified`, stale pages removed |
+| `test_incremental.py` | 14 | Crawler | new / changed / unchanged pages on a re-crawl, `304 Not Modified`, stale pages removed |
 | `test_week1_submission.py` | 3 | Crawler | the week 1 robots.txt check and test spider |
 | `test_quality.py` | 6 | Infrastructure | data-quality checks, SimHash near-duplicates |
-| `test_preprocess.py` | 9 | Pre-processing | empty text, mixed case, punctuation, numbers, stop words, stemming, URLs, short words |
-| `test_search_modules.py` | 7 | Indexer | term and document frequencies, vector norms, empty collection |
+| `test_preprocess.py` | 10 | Pre-processing | empty text, mixed case, punctuation, numbers, stop words, stemming, URLs, short words |
+| `test_search_modules.py` | 8 | Indexer | term and document frequencies, vector norms, empty collection |
 | `test_rank.py` | 29 | Ranker | hand-calculated TF-IDF and cosine scores for 3 documents and 2 queries, result order, unknown words, empty and stop-word-only queries — run in Python and again on PostgreSQL |
 | `test_web.py` | 12 | Web / API | `/search` JSON fields, HTTP 400 for an empty query, no results, backend down (HTTP 503), paging (10 per page) |
 | `test_snippet.py` | 6 | Web | snippet around the first query word, word forms through stemming, bold query words, HTML escaping |
-| `test_search_filters.py` | 7 | Ranker / Web | only pages with every query word, unknown word gives no results, site filter, `/explain` score equals `rank()` |
+| `test_search_filters.py` | 11 | Ranker / Web | only pages with every query word, unknown word gives no results, site filter, `/explain` score equals `rank()` |
 
 The ranking tests are the most important: they compare the scores of `rank()` with values calculated by hand,
 so an error in the formula, in the use of `page_norms` or in the SQL is found at once. The same cases run twice —

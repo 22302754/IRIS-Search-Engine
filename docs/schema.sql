@@ -34,7 +34,8 @@ CREATE TABLE IF NOT EXISTS postings (
     PRIMARY KEY (term_id, page_id)
 );
 
-CREATE INDEX IF NOT EXISTS postings_term_id_idx ON postings (term_id);
+-- covering index: the ranker reads (page_id, tf) for a term from the index alone
+CREATE INDEX IF NOT EXISTS postings_term_covering_idx ON postings (term_id) INCLUDE (page_id, tf);
 CREATE INDEX IF NOT EXISTS postings_page_id_idx ON postings (page_id);
 
 CREATE TABLE IF NOT EXISTS page_norms (

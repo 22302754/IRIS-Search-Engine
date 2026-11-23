@@ -63,7 +63,8 @@ ranked by TF-IDF and cosine similarity.
 | 3 | 19–25 Oct | Incremental re-crawl, 9 sites (3,769 pages), shared cloud database | ✅ |
 | 4 | 26 Oct – 1 Nov | **Milestone: first end-to-end search** – pre-processing, index, ranking, API, tests, weekly crawl | ✅ (public website pending) |
 | – | 2–20 Nov | Midterm examinations: project paused (the weekly crawl kept running) | ⏸ |
-| 5 | 23–29 Nov | **Final week**: public website, Precision@10 evaluation, demo video, final report and presentation | 🔄 Current week |
+| 5 | 23–29 Nov | **Finish the system**: public website ✅, Precision@10 evaluation, browser checks, demo video, complete final report | 🔄 Current week |
+| 6 | 30 Nov – 6 Dec | **New features and design**: collection statistics page, "Did you mean?" and autocomplete, BM25 comparison, new responsive design and dark mode; final presentation and submission (Sun 6 Dec) | ⏳ |
 
 ## Repository structure
 

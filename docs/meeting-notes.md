@@ -8,7 +8,7 @@ when it is written here.
 | Week | Decision | Why |
 | --- | --- | --- |
 | 5 | Weekly crawl runs twice a week (Monday and Thursday) | The free Supabase project paused on 23 Nov, 7 days after the last run |
-| 5 | Weeks 5–8 of the plan compressed into one final week (23–29 Nov) | Project paused 2–20 Nov for the midterm examinations |
+| 5 | The 8-week plan becomes 6 weeks: week 5 (23–29 Nov) finishes the system and the report; week 6 (30 Nov – 6 Dec) adds new features and a new design, then the final presentation and submission | Project paused 2–20 Nov for the midterm examinations |
 | 4 | Seven IR-textbook pages that held only navigation text were deleted from the database | The Stanford server refused all connections, so the crawler could not refresh them |
 | 4 | Test queries Q13 and Q14 replaced, Q12's relevant URL corrected, before any judging | The collection has no MDN pages on promises or HTTP status codes |
 | 4 | Every pull request runs all tests on GitHub Actions; `main` needs a reviewed pull request | A broken change is seen before it is merged |

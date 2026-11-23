@@ -6,7 +6,7 @@ Owner: Mohammed (Crawler & Infrastructure)
 | --- | --- | --- |
 | Database | Supabase, Frankfurt ([cloud-database.md](cloud-database.md)) | Weekly crawl + indexer |
 | Web app (Flask) | Render, free plan, Frankfurt | Every merge into `main` is deployed automatically |
-| Weekly crawl | GitHub Actions, Mondays 02:00 UTC | `.github/workflows/weekly-crawl.yml` |
+| Weekly crawl | GitHub Actions, Mondays and Thursdays 02:00 UTC | `.github/workflows/weekly-crawl.yml` |
 | Backups | Before every weekly crawl, kept 30 days as a workflow artifact | `python3 -m infra.backup_db` |
 
 ## 1. Web app on Render
@@ -16,7 +16,7 @@ The repository already contains `render.yaml`, so Render reads the settings from
 1. Sign in at render.com with GitHub.
 2. **New → Blueprint**, choose the `IRIS-Search-Engine` repository, then **Apply**.
 3. When asked for `DATABASE_URL`, paste the Supabase session pooler string (the same line as in `.env`, without `DATABASE_URL=`).
-4. Wait for the first build (3–5 minutes). The app URL looks like `https://iris-search.onrender.com`.
+4. Wait for the first build (3–5 minutes). Our app: https://iris-search-re83.onrender.com .
 5. Share the URL with the team and put it in the README.
 
 Notes
@@ -51,7 +51,7 @@ is given, and it checks the row counts against the backup before committing.
 
 ```bash
 python3 -m infra.check_quality                     # -> docs/data-quality.md
-python3 -m infra.smoke_test --base-url https://iris-search.onrender.com --out docs/smoke-test.md
+python3 -m infra.smoke_test --base-url https://iris-search-re83.onrender.com --out docs/smoke-test.md
 ```
 
 The smoke test sends the 20 test queries (from `docs/test-queries.md` when it exists) and reports the response

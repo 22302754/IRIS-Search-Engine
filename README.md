@@ -4,6 +4,8 @@
 search engine built as our ENGI 401/402 capstone project at Cyprus International University, Faculty of Engineering.
 It crawls ten websites, cleans and indexes their text, and ranks results with TF-IDF and cosine similarity.
 
+**Live search engine: https://iris-search-re83.onrender.com**
+
 Supervisor: **Asst. Prof. Dr. Tolga Yırtıcı** · Term: 2026/2027 Fall
 
 ## Team
@@ -50,7 +52,7 @@ ranked by TF-IDF and cosine similarity.
 | Search page and results page – paging, snippets with the query words in bold | Elpi | ✅ |
 | Site filter, all-words matching, ranking details per result and `/explain` page | Team | ✅ |
 | Tests on every pull request (GitHub Actions) | Elpi | ✅ 122 tests ([testing](docs/report/testing-section.md)) |
-| Public website (Render) | Mohammed | 🔄 Next step |
+| Public website (Render) – 20 of 20 test queries under 1 s, median 189 ms | Mohammed | ✅ [iris-search-re83.onrender.com](https://iris-search-re83.onrender.com) |
 
 ## Roadmap
 

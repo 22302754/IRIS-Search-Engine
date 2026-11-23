@@ -57,7 +57,7 @@ request, a change whose tests fail is visible before it is merged.
 running engine and records the HTTP status, the number of results and the response time of each. After the
 database connections were made reusable, all 20 benchmark queries were answered in 552–694 ms
 ([indexing section](indexing-section.md)). The figures for the deployed site are added after deployment:
-**[…] of 20** queries under one second, median **[…] ms**.
+**20 of 20** queries under one second, median **189 ms**, slowest 298 ms (23 November 2026).
 
 **Data quality.** On 1 November 2026 the data-quality check of the 3,769 pages found 7 pages with unknown language,
 91 very short pages (< 50 words), 25 very long pages (> 20,000 words), 7 repeated template lines, 32 groups of

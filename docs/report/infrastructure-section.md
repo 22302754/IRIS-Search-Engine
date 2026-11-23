@@ -2,7 +2,7 @@
 
 Author: Mohammed Nouri (Crawler & Infrastructure) · For the final report, chapter "System Design and Implementation"
 
-> Numbers marked **[…]** are filled in after the first deployment, backup and smoke test.
+> Numbers measured on 23 November 2026.
 
 ## Overview
 
@@ -38,7 +38,7 @@ application from `requirements.txt` and starts it with Gunicorn using two worker
 is deployed automatically, so the live site always matches the reviewed code. The database connection string is
 entered as a secret in the Render dashboard. The free plan stops the service after 15 minutes without traffic and
 the next request takes about a minute to start it again, which is acceptable for a student project as long as the
-site is opened shortly before a demonstration. Public URL: **[…]**.
+site is opened shortly before a demonstration. Public URL: **https://iris-search-re83.onrender.com**.
 
 ## Scheduled Re-crawl
 
@@ -62,7 +62,8 @@ gzipped CSV file using PostgreSQL's `COPY` command, together with the table defi
 counts. This avoids depending on the `pg_dump` program, whose version must match the server. The restore tool
 recreates the tables, loads the files, resets the ID sequences and compares the row counts with the manifest before
 committing; it refuses to overwrite non-empty tables or the source database unless explicitly forced. A test
-restore into a local database reproduced every table exactly. The cloud backup takes **[…] seconds** and **[…] MB**.
+restore into a local database reproduced every table exactly. The cloud backup of 23 November 2026 took **267.1 seconds** over the internet and holds **23.2 MB** of compressed
+files, 17.7 MB of them for the page texts.
 
 ## Search Speed
 
@@ -88,11 +89,15 @@ cleaner did not remove), duplicate titles, and near-duplicate pages found with 6
 about 32 bits apart, so pages within 6 bits are reported. The hashes are split into seven blocks: two hashes that
 differ in at most 6 bits must agree on one whole block, so only pages sharing a block are compared, which gave the
 same pairs as comparing every page with every other page. On 4,000 test pages the check takes about 13 seconds.
-Its first run on the real collection found **[…]**.
+Its run on 23 November 2026 over the final collection (4,703 records of the backup file, because the cloud query
+timed out) took 7.0 seconds and found **7 pages with unknown language, 202 very short pages, 25 very long pages,
+7 repeated template lines, 44 groups of duplicate titles and 73 near-duplicate pairs**. Most near-duplicates are
+staff pages that the CIU website publishes under two faculties, and Wikipedia redirects.
 
 A smoke-test tool sends the 20 test queries to the live site and records the response time and result count of
 each, measuring the system against the requirement of answering a query in under one second (NFR-1). On the
-deployed system, **[…] of 20** queries were answered within one second, with a median of **[…] ms**.
+deployed system on 23 November 2026, **20 of 20** queries were answered within one second, with a median of **189 ms**
+(95th percentile 290 ms, slowest 298 ms), and every query found at least one result ([smoke test](../smoke-test.md)).
 
 ## References
 

@@ -90,7 +90,7 @@ connections are kept open in a small pool between searches.
 | Page text sent per search | full text of 10 pages → at most 15,000 characters |
 | Database time, 20 test queries | 1.1–2.9 ms each |
 | Response time on the laptop, 20 test queries (median) | **[…] ms** |
-| Response time on the public site, 20 test queries (median) | **[…] ms** |
+| Response time on the public site, 20 test queries (median) | **189 ms** |
 
 The last two rows are measured with
 `python3 -m infra.smoke_test --base-url <url> --out docs/smoke-test.md`, which

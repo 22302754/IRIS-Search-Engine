@@ -1,12 +1,13 @@
-# IRIS - weekly incremental re-crawl of the shared cloud database.
-# Every Monday 05:00 Cyprus time (02:00 UTC), and on demand from the Actions tab ("Run workflow").
+# IRIS - incremental re-crawl of the shared cloud database.
+# Every Monday and Thursday 05:00 Cyprus time (02:00 UTC), and on demand from the Actions tab ("Run workflow").
 # Needs one repository secret: DATABASE_URL = the Supabase session pooler connection string.
-# Running weekly also keeps the free Supabase project from pausing after 7 idle days.
+# Twice a week, because the free Supabase project pauses after 7 days without activity: with one run on
+# Mondays it was paused on Monday 23 November, exactly 7 days after the previous run.
 name: Weekly crawl
 
 on:
   schedule:
-    - cron: "0 2 * * 1"
+    - cron: "0 2 * * 1,4"
   workflow_dispatch:
 
 permissions:

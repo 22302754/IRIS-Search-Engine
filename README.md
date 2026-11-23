@@ -40,12 +40,12 @@ ranked by TF-IDF and cosine similarity.
 
 | Module | Owner | Status |
 | --- | --- | --- |
-| Crawler – 10 sites (CIU added in week 5), cleaning, duplicates, incremental re-crawl | Mohammed | ✅ **4,697 pages, 7.66 million words** ([crawl report](docs/crawl-report.md)) |
+| Crawler – 10 sites (CIU added in week 5), cleaning, duplicates, incremental re-crawl | Mohammed | ✅ **4,702 pages, 7.66 million words** ([crawl report](docs/crawl-report.md)) |
 | Shared database (Supabase PostgreSQL, Frankfurt) | Mohammed | ✅ |
 | Operations – backups, data-quality check, smoke test, weekly crawl on GitHub Actions | Mohammed | ✅ ([deployment](docs/deployment.md)) |
 | `preprocess(text)` – tokens, stop words, Porter stemming | Yazen | ✅ |
 | `rank(query, k)` – TF-IDF + cosine, hand-calculated tests, 20 test queries | Yazen | ✅ ([test queries](docs/test-queries.md)) |
-| Indexer `python3 -m indexer.build` – full and incremental | Hani | ✅ 102,128 terms, 1.46 million postings ([schema](docs/schema.sql)) |
+| Indexer `python3 -m indexer.build` – full and incremental | Hani | ✅ 102,449 terms, 1.46 million postings ([schema](docs/schema.sql)) |
 | `GET /search` JSON API – all 20 benchmark queries under 1 s | Hani | ✅ |
 | Search page and results page – paging, snippets with the query words in bold | Elpi | ✅ |
 | Site filter, all-words matching, ranking details per result and `/explain` page | Team | ✅ |
@@ -60,10 +60,8 @@ ranked by TF-IDF and cosine similarity.
 | 2 | 12–18 Oct | Full crawler and storage (1,360 pages); module contracts; search page | ✅ |
 | 3 | 19–25 Oct | Incremental re-crawl, 9 sites (3,769 pages), shared cloud database | ✅ |
 | 4 | 26 Oct – 1 Nov | **Milestone: first end-to-end search** – pre-processing, index, ranking, API, tests, weekly crawl | ✅ (public website pending) |
-| 5 | 2–8 Nov | Better ranking (title boost) and interface; public website | ⏳ Current week |
-| 6 | 9–15 Nov | Evaluation of the 20 test queries (precision of the top 10 results) | ⏳ |
-| 7 | 16–22 Nov | Testing, fixes, final demo preparation | ⏳ |
-| 8 | 23–29 Nov | Final report and presentation | ⏳ |
+| – | 2–20 Nov | Midterm examinations: project paused (the weekly crawl kept running) | ⏸ |
+| 5 | 23–29 Nov | **Final week**: public website, Precision@10 evaluation, demo video, final report and presentation | 🔄 Current week |
 
 ## Repository structure
 

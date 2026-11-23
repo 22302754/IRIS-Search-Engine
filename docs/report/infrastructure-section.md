@@ -42,7 +42,7 @@ site is opened shortly before a demonstration. Public URL: **[…]**.
 
 ## Scheduled Re-crawl
 
-A GitHub Actions workflow runs every Monday at 02:00 UTC and can also be started by hand. It backs up the database,
+A GitHub Actions workflow runs every Monday and Thursday at 02:00 UTC and can also be started by hand. It backs up the database,
 runs the full pipeline (robots.txt check, incremental crawl, crawl report, and the indexer, which re-indexes only
 the pages changed since its last checkpoint) and runs the data-quality check,
 then attaches the reports and the backup to the run for 30 days. Because the crawl is incremental, a weekly run
@@ -51,7 +51,9 @@ new or changed. Old pages are also removed when they now return HTTP 404 or 410,
 copy of another page, or when they have become too short to index (for example an IR textbook page that holds only
 navigation once the menu text is cleaned away), so the collection never keeps stale versions. In a test against
 local sites, two pages turned into stubs and one deleted page were removed from both the database and the backup
-file in the next run. The weekly activity also prevents the free Supabase project from pausing after seven idle days.
+file in the next run. The free Supabase project pauses after seven days without activity. With one run on Mondays it paused on
+23 November 2026, exactly seven days after the previous run, and had to be restored; the schedule was therefore
+changed to twice a week.
 
 ## Backups
 
